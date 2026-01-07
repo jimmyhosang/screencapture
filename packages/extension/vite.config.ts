@@ -1,0 +1,20 @@
+import { defineConfig } from 'vite';
+import webExtension from 'vite-plugin-web-extension';
+
+export default defineConfig({
+  plugins: [
+    webExtension({
+      manifest: 'src/manifest.json',
+      watchFilePaths: ['src/**/*'],
+    }),
+  ],
+  build: {
+    outDir: 'dist',
+    emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        popup: 'src/popup/index.html',
+      },
+    },
+  },
+});

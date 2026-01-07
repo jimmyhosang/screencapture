@@ -1,0 +1,22 @@
+{
+  "name": "@screencapture/extension",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite build --watch --mode development",
+    "build": "tsc -b && vite build",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "rrweb": "^2.0.0-alpha.4"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.281",
+    "@types/node": "^24.10.1",
+    "@vitejs/plugin-react": "^5.1.1",
+    "typescript": "~5.9.3",
+    "vite": "^7.2.4",
+    "vite-plugin-web-extension": "^4.1.6"
+  }
+}
