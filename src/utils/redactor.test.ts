@@ -26,7 +26,7 @@ import {
   redactExtended,
   EXTENDED_REDACTION_CONFIG,
 } from './redactor';
-import type { RedactionConfig, ExtendedRedactionConfig, ConfidenceLevel } from './redactor';
+import type { RedactionConfig, ExtendedRedactionConfig } from './redactor';
 
 describe('redactEmail', () => {
   describe('basic redaction', () => {
@@ -686,7 +686,7 @@ describe('Custom Patterns', () => {
 
   describe('addCustomPattern', () => {
     it('should add a custom pattern', () => {
-      addCustomPattern('employeeId', /\bEMP-\d{6}\b/, (match) => 'EMP-******');
+      addCustomPattern('employeeId', /\bEMP-\d{6}\b/, () => 'EMP-******');
       const patterns = getCustomPatterns();
       expect(patterns.has('employeeId')).toBe(true);
     });
