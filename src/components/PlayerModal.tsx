@@ -26,13 +26,17 @@ export function PlayerModal({ isOpen, onClose, events }: PlayerModalProps) {
     }
     playerContainerRef.current.innerHTML = '';
 
+    // Calculate player dimensions based on viewport (accounting for modal padding and header)
+    const width = Math.floor(window.innerWidth * 0.9);
+    const height = Math.floor(window.innerHeight * 0.85);
+
     // Create new player
     playerRef.current = new rrwebPlayer({
       target: playerContainerRef.current,
       props: {
         events,
-        width: 800,
-        height: 500,
+        width,
+        height,
         autoPlay: true,
         showController: true,
         speedOption: [1, 2, 4, 8],

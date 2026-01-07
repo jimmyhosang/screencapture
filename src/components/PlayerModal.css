@@ -25,10 +25,12 @@
   background: #1a1a2e;
   border-radius: 12px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-  max-width: 90vw;
-  max-height: 90vh;
+  width: 95vw;
+  height: 95vh;
   overflow: hidden;
   animation: slideIn 0.3s ease-out;
+  display: flex;
+  flex-direction: column;
 }
 
 @keyframes slideIn {
@@ -74,6 +76,11 @@
 
 .player-modal-body {
   padding: 20px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
 
 .player-modal-empty {
@@ -85,6 +92,11 @@
 .player-container {
   border-radius: 8px;
   overflow: hidden;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Override rrweb-player styles for better integration */
