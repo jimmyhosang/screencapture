@@ -1,0 +1,342 @@
+/* =============================================================================
+   Storage Settings Component Styles
+   ============================================================================= */
+
+.storage-settings {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 20px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.storage-settings--compact {
+  padding: 12px 16px;
+}
+
+/* Header */
+.storage-settings__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.storage-settings__header h3,
+.storage-settings__header h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.storage-settings__stats-badge {
+  font-size: 12px;
+  color: #6b7280;
+  background: #f3f4f6;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.storage-settings__warning-badge {
+  font-size: 12px;
+  color: #b45309;
+  background: #fef3c7;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+/* Stats */
+.storage-settings__stats {
+  display: flex;
+  gap: 16px;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.storage-settings__stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
+.storage-settings__stat-value {
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.storage-settings__stat-label {
+  font-size: 11px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Message */
+.storage-settings__message {
+  padding: 10px 12px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
+.storage-settings__message--success {
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #6ee7b7;
+}
+
+.storage-settings__message--error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+/* Sections */
+.storage-settings__section {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.storage-settings__section:last-of-type {
+  border-bottom: none;
+  margin-bottom: 16px;
+}
+
+.storage-settings__section h4 {
+  margin: 0 0 12px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Checkbox */
+.storage-settings__checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.storage-settings__checkbox input[type='checkbox'] {
+  margin-top: 2px;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.storage-settings__checkbox span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.storage-settings__checkbox strong {
+  font-size: 14px;
+  color: #111827;
+}
+
+.storage-settings__checkbox small {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* Fields */
+.storage-settings__field {
+  margin-bottom: 16px;
+}
+
+.storage-settings__field:last-child {
+  margin-bottom: 0;
+}
+
+.storage-settings__field label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+.storage-settings__field small {
+  display: block;
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.storage-settings__input-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.storage-settings__input-group input {
+  width: 100px;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #111827;
+}
+
+.storage-settings__input-group input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.storage-settings__input-suffix {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+/* Toggle */
+.storage-settings__toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
+  color: #6b7280;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+
+.storage-settings__toggle:hover {
+  color: #374151;
+}
+
+/* Advanced */
+.storage-settings__advanced {
+  padding-left: 16px;
+  border-left: 2px solid #e5e7eb;
+}
+
+/* Compact mode */
+.storage-settings--compact .storage-settings__compact-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+}
+
+.storage-settings--compact .storage-settings__checkbox {
+  flex-direction: row;
+  align-items: center;
+}
+
+.storage-settings--compact .storage-settings__checkbox span {
+  flex-direction: row;
+}
+
+.storage-settings__inline-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #374151;
+}
+
+.storage-settings__inline-field input {
+  width: 60px;
+  padding: 4px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 13px;
+  text-align: center;
+}
+
+.storage-settings__inline-field span {
+  color: #6b7280;
+}
+
+/* Actions */
+.storage-settings__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.storage-settings--compact .storage-settings__actions {
+  margin-top: 12px;
+  padding-top: 0;
+  border-top: none;
+}
+
+/* Buttons */
+.btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn--primary {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+.btn--secondary {
+  background: white;
+  color: #374151;
+  border-color: #d1d5db;
+}
+
+.btn--secondary:hover:not(:disabled) {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.btn--warning {
+  background: #fef3c7;
+  color: #b45309;
+  border-color: #fcd34d;
+}
+
+.btn--warning:hover:not(:disabled) {
+  background: #fde68a;
+  border-color: #f59e0b;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .storage-settings__stats {
+    flex-wrap: wrap;
+  }
+
+  .storage-settings__stat {
+    min-width: 80px;
+  }
+
+  .storage-settings__actions {
+    flex-direction: column;
+  }
+
+  .storage-settings__actions .btn {
+    width: 100%;
+  }
+}

@@ -151,6 +151,17 @@
   line-height: 1.3;
 }
 
+/* Indicators Toggle */
+.indicators-toggle-container {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 /* Controls */
 .controls {
   display: flex;

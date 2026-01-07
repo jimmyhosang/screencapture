@@ -1,0 +1,390 @@
+/* Redaction Verifier - PII scanning component */
+
+.redaction-verifier {
+  padding: 20px;
+  color: #e0e0e0;
+  max-height: 100%;
+  overflow-y: auto;
+}
+
+.verifier-header {
+  margin-bottom: 20px;
+}
+
+.verifier-header h3 {
+  margin: 0 0 8px 0;
+  font-size: 1.25rem;
+  color: #fff;
+}
+
+.verifier-description {
+  margin: 0;
+  color: #888;
+  font-size: 14px;
+}
+
+/* Progress Bar */
+.verifier-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #646cff, #a855f7);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 13px;
+  color: #888;
+  min-width: 40px;
+  text-align: right;
+}
+
+/* Verification Steps */
+.verification-steps {
+  margin-bottom: 24px;
+}
+
+.verification-steps h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.verification-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.2s;
+}
+
+.verification-step--running {
+  background: rgba(100, 108, 255, 0.1);
+  border-color: rgba(100, 108, 255, 0.3);
+}
+
+.verification-step--completed {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Step Icons */
+.step-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.step-icon--pending {
+  color: #555;
+}
+
+.step-icon--running {
+  color: #646cff;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.step-icon--completed {
+  color: #4ade80;
+}
+
+.step-icon--skipped {
+  color: #888;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.step-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.step-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.step-name {
+  font-weight: 500;
+  color: #fff;
+  font-size: 14px;
+}
+
+.step-stats {
+  font-size: 12px;
+  color: #888;
+}
+
+.step-issues {
+  color: #fbbf24;
+}
+
+.step-description {
+  font-size: 12px;
+  color: #666;
+}
+
+/* Results Summary */
+.verification-results {
+  margin-bottom: 24px;
+}
+
+.verification-results h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.result-badge {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  border-radius: 8px;
+  gap: 4px;
+}
+
+.result-badge--success {
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.3);
+}
+
+.result-badge--warning {
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.badge-icon {
+  font-size: 24px;
+  margin-bottom: 4px;
+}
+
+.result-badge--success .badge-icon {
+  color: #4ade80;
+}
+
+.result-badge--warning .badge-icon {
+  color: #fbbf24;
+}
+
+.badge-text {
+  font-weight: 600;
+  font-size: 16px;
+  color: #fff;
+}
+
+.badge-description {
+  font-size: 13px;
+  color: #888;
+}
+
+/* Issues List */
+.issues-list {
+  margin-bottom: 24px;
+}
+
+.issues-list h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.issue-item {
+  background: rgba(251, 191, 36, 0.05);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 10px;
+}
+
+.issue-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.issue-time {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.time-label {
+  font-size: 12px;
+  color: #888;
+}
+
+.time-value {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+  font-size: 13px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.issue-types {
+  display: flex;
+  gap: 6px;
+}
+
+.pii-type-badge {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.pii-type-badge--email {
+  background: rgba(100, 108, 255, 0.2);
+  color: #a5a8ff;
+}
+
+.pii-type-badge--phone {
+  background: rgba(168, 85, 247, 0.2);
+  color: #c084fc;
+}
+
+.pii-type-badge--ssn {
+  background: rgba(255, 71, 87, 0.2);
+  color: #ff6b7a;
+}
+
+.pii-type-badge--creditCard {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+}
+
+.issue-context {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.context-label {
+  color: #888;
+}
+
+.context-value {
+  color: #bbb;
+}
+
+.issue-snippet {
+  margin-bottom: 12px;
+}
+
+.snippet-label {
+  display: block;
+  font-size: 11px;
+  color: #888;
+  margin-bottom: 4px;
+}
+
+.snippet-value {
+  display: block;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 8px 10px;
+  border-radius: 4px;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+  font-size: 12px;
+  color: #e0e0e0;
+  word-break: break-all;
+}
+
+.jump-to-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(100, 108, 255, 0.15);
+  border: 1px solid rgba(100, 108, 255, 0.3);
+  border-radius: 6px;
+  color: #a5a8ff;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.jump-to-btn:hover {
+  background: rgba(100, 108, 255, 0.25);
+  border-color: rgba(100, 108, 255, 0.5);
+}
+
+.jump-to-btn svg {
+  flex-shrink: 0;
+}
+
+/* Actions */
+.verifier-actions {
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.rerun-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: #e0e0e0;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.rerun-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
+.rerun-btn svg {
+  flex-shrink: 0;
+}

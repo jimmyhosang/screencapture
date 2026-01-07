@@ -1,0 +1,223 @@
+/* Virtual Event List Styles */
+
+.virtual-event-list-container {
+  display: flex;
+  flex-direction: column;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* Header */
+.virtual-event-list-header {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 12px;
+}
+
+.virtual-event-header-cell {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #888;
+}
+
+.virtual-event-header-index {
+  width: 40px;
+  text-align: center;
+}
+
+.virtual-event-header-type {
+  flex: 1;
+}
+
+.virtual-event-header-time {
+  width: 100px;
+  text-align: right;
+}
+
+/* Summary */
+.virtual-event-list-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 12px;
+  color: #666;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Scrollable Container */
+.virtual-event-list-scroll {
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+}
+
+.virtual-event-list-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.virtual-event-list-scroll::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.virtual-event-list-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.virtual-event-list-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Spacer */
+.virtual-event-list-spacer {
+  position: relative;
+  width: 100%;
+}
+
+/* Event Row */
+.virtual-event-row {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  transition: background 0.15s;
+  box-sizing: border-box;
+}
+
+.virtual-event-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.virtual-event-index {
+  width: 40px;
+  text-align: center;
+  font-size: 11px;
+  color: #555;
+  font-family: 'SF Mono', Monaco, monospace;
+}
+
+.virtual-event-icon {
+  font-size: 14px;
+  width: 24px;
+  text-align: center;
+}
+
+.virtual-event-type {
+  flex: 1;
+  font-size: 13px;
+  color: #ccc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.virtual-event-time {
+  width: 80px;
+  text-align: right;
+  font-size: 12px;
+  font-family: 'SF Mono', Monaco, monospace;
+  color: #888;
+}
+
+.virtual-event-seek {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: rgba(100, 108, 255, 0.15);
+  border: none;
+  border-radius: 4px;
+  color: #a5a8ff;
+  font-size: 10px;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.virtual-event-row:hover .virtual-event-seek {
+  opacity: 1;
+}
+
+.virtual-event-seek:hover {
+  background: rgba(100, 108, 255, 0.3);
+}
+
+/* Event Type Colors */
+.virtual-event-row[data-type="FullSnapshot"] .virtual-event-type {
+  color: #4ade80;
+}
+
+.virtual-event-row[data-type="Meta"] .virtual-event-type {
+  color: #60a5fa;
+}
+
+.virtual-event-row[data-type="Mutation"] .virtual-event-type {
+  color: #fbbf24;
+}
+
+.virtual-event-row[data-type="MouseInteraction"] .virtual-event-type,
+.virtual-event-row[data-type="MouseMove"] .virtual-event-type {
+  color: #f472b6;
+}
+
+.virtual-event-row[data-type="Input"] .virtual-event-type {
+  color: #c084fc;
+}
+
+/* Empty State */
+.virtual-event-list-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  color: #666;
+  text-align: center;
+}
+
+.virtual-event-list-empty p {
+  margin: 0;
+  font-size: 14px;
+}
+
+/* Keyboard Navigation */
+.virtual-event-row:focus {
+  outline: none;
+  background: rgba(100, 108, 255, 0.1);
+  box-shadow: inset 0 0 0 2px rgba(100, 108, 255, 0.3);
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .virtual-event-list-header,
+  .virtual-event-row {
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .virtual-event-index {
+    width: 32px;
+    font-size: 10px;
+  }
+
+  .virtual-event-type {
+    font-size: 12px;
+  }
+
+  .virtual-event-time {
+    width: 60px;
+    font-size: 10px;
+  }
+}

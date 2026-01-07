@@ -1,0 +1,270 @@
+/* Performance Monitor Styles */
+
+.perf-monitor {
+  position: fixed;
+  z-index: 10000;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+}
+
+/* Position variants */
+.perf-monitor--top-right {
+  top: 16px;
+  right: 16px;
+}
+
+.perf-monitor--top-left {
+  top: 16px;
+  left: 16px;
+}
+
+.perf-monitor--bottom-right {
+  bottom: 16px;
+  right: 16px;
+}
+
+.perf-monitor--bottom-left {
+  bottom: 16px;
+  left: 16px;
+}
+
+/* Toggle Button (collapsed state) */
+.perf-monitor-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(30, 30, 40, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.perf-monitor-toggle:hover {
+  background: rgba(40, 40, 55, 0.95);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.perf-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #666;
+}
+
+.perf-status-dot--recording {
+  background: #4ade80;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.2);
+  }
+}
+
+.perf-monitor-label {
+  min-width: 40px;
+}
+
+.perf-warning-icon {
+  color: #fbbf24;
+  display: flex;
+  animation: shake 0.5s ease-in-out infinite;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
+}
+
+/* Expanded Panel */
+.perf-monitor-panel {
+  width: 320px;
+  background: rgba(20, 20, 30, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+
+.perf-monitor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.perf-monitor-header h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.perf-monitor-close {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.perf-monitor-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+/* Warning Banner */
+.perf-warning-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(251, 191, 36, 0.1);
+  border-bottom: 1px solid rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+  font-size: 12px;
+}
+
+.perf-warning-banner svg {
+  flex-shrink: 0;
+}
+
+/* Metrics Grid */
+.perf-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  padding: 12px;
+}
+
+/* Metric Card */
+.perf-metric-card {
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.perf-metric-card--warning {
+  background: rgba(251, 191, 36, 0.08);
+  border-color: rgba(251, 191, 36, 0.2);
+}
+
+.perf-metric-card--critical {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.perf-metric-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.perf-metric-icon {
+  display: flex;
+  color: #888;
+}
+
+.perf-metric-card--warning .perf-metric-icon {
+  color: #fbbf24;
+}
+
+.perf-metric-card--critical .perf-metric-icon {
+  color: #ef4444;
+}
+
+.perf-metric-label {
+  font-size: 11px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.perf-metric-value {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.perf-metric-number {
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.perf-metric-card--warning .perf-metric-number {
+  color: #fbbf24;
+}
+
+.perf-metric-card--critical .perf-metric-number {
+  color: #ef4444;
+}
+
+.perf-metric-unit {
+  font-size: 11px;
+  color: #666;
+}
+
+/* Recording Status */
+.perf-recording-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.perf-status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #666;
+}
+
+.perf-status-indicator::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #444;
+}
+
+.perf-status-indicator--active {
+  color: #4ade80;
+}
+
+.perf-status-indicator--active::before {
+  background: #4ade80;
+  animation: pulse 1.5s infinite;
+}
+
+.perf-memory-note {
+  font-size: 10px;
+  color: #555;
+  font-style: italic;
+}

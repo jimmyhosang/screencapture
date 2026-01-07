@@ -1,0 +1,258 @@
+/* Redaction Overlay - Visual indicators for protected data */
+
+.redaction-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Base indicator styles */
+.redaction-indicator {
+  position: absolute;
+  pointer-events: auto;
+  border-radius: 4px;
+  transition: opacity 0.2s ease;
+}
+
+/* Input field indicators - subtle border glow */
+.redaction-indicator--input {
+  border: 2px solid rgba(100, 108, 255, 0.6);
+  background: rgba(100, 108, 255, 0.05);
+  box-shadow: 0 0 8px rgba(100, 108, 255, 0.3);
+}
+
+.redaction-indicator--input:hover {
+  border-color: rgba(100, 108, 255, 0.9);
+  background: rgba(100, 108, 255, 0.1);
+}
+
+/* Blocked element indicators - warning style */
+.redaction-indicator--blocked {
+  border: 2px dashed rgba(255, 71, 87, 0.7);
+  background: rgba(255, 71, 87, 0.1);
+  box-shadow: inset 0 0 20px rgba(255, 71, 87, 0.1);
+}
+
+.redaction-indicator--blocked::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 10px,
+    rgba(255, 71, 87, 0.05) 10px,
+    rgba(255, 71, 87, 0.05) 20px
+  );
+  border-radius: 2px;
+}
+
+/* Text PII indicators - highlight style */
+.redaction-indicator--text {
+  background: rgba(255, 193, 7, 0.15);
+  border-bottom: 2px solid rgba(255, 193, 7, 0.7);
+  border-radius: 2px;
+}
+
+.redaction-indicator--text:hover {
+  background: rgba(255, 193, 7, 0.25);
+}
+
+/* Badge styles */
+.redaction-badge {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-radius: 4px;
+  padding: 2px 4px;
+  white-space: nowrap;
+  animation: badgePulse 2s ease-in-out infinite;
+}
+
+@keyframes badgePulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Lock icon badge for inputs */
+.redaction-badge--lock {
+  top: -8px;
+  right: -8px;
+  background: linear-gradient(135deg, #646cff, #5a5fcf);
+  color: white;
+  padding: 4px;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(100, 108, 255, 0.5);
+}
+
+.redaction-badge--lock svg {
+  display: block;
+}
+
+/* Blocked badge */
+.redaction-badge--blocked {
+  top: -8px;
+  right: -8px;
+  background: linear-gradient(135deg, #ff4757, #c0392b);
+  color: white;
+  padding: 4px;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(255, 71, 87, 0.5);
+}
+
+.redaction-badge--blocked svg {
+  display: block;
+}
+
+/* PII text badge */
+.redaction-badge--pii {
+  top: -10px;
+  right: -10px;
+  background: linear-gradient(135deg, #ffc107, #e6a700);
+  color: #1a1a2e;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 9px;
+  box-shadow: 0 2px 8px rgba(255, 193, 7, 0.4);
+}
+
+/* Tooltip styles */
+.redaction-tooltip {
+  position: fixed;
+  background: rgba(26, 26, 46, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+  z-index: 10000;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  transform: translateX(-50%);
+  animation: tooltipFadeIn 0.15s ease-out;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.redaction-tooltip-title {
+  color: #888;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.redaction-tooltip-type {
+  background: rgba(255, 193, 7, 0.2);
+  color: #ffc107;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Recording indicator toggle button styles (for use in parent component) */
+.redaction-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 13px;
+  color: #aaa;
+}
+
+.redaction-toggle:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.redaction-toggle.active {
+  background: rgba(100, 108, 255, 0.15);
+  border-color: rgba(100, 108, 255, 0.4);
+  color: #a5a8ff;
+}
+
+.redaction-toggle-icon {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.redaction-toggle-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Legend for indicator types */
+.redaction-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  margin-top: 8px;
+}
+
+.redaction-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #888;
+}
+
+.redaction-legend-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.redaction-legend-icon--input {
+  background: rgba(100, 108, 255, 0.2);
+  border: 2px solid rgba(100, 108, 255, 0.6);
+}
+
+.redaction-legend-icon--blocked {
+  background: rgba(255, 71, 87, 0.2);
+  border: 2px dashed rgba(255, 71, 87, 0.6);
+}
+
+.redaction-legend-icon--pii {
+  background: rgba(255, 193, 7, 0.2);
+  border-bottom: 2px solid rgba(255, 193, 7, 0.6);
+}
