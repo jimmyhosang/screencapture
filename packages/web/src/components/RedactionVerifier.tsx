@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { eventWithTime } from '@rrweb/types';
-import { detectPII } from '../utils/piiDetector';
-import { redactAll } from '../utils/redactor';
+import { detectPII, redactAll } from '@screencapture/core';
 import './RedactionVerifier.css';
 
 interface RedactionVerifierProps {

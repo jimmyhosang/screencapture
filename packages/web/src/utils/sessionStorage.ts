@@ -1,38 +1,23 @@
-import type { eventWithTime } from '@rrweb/types';
-import type { PrivacyConfig } from '../hooks/useRecorder';
+import {
+  type PrivacyConfig,
+  type SessionRecording as CoreSessionRecording,
+  type AppSettings as CoreAppSettings,
+  type StorageStats,
+  calculateDataSizeMB,
+  DEFAULT_APP_SETTINGS,
+} from '@screencapture/core';
 
-export interface SessionRecording {
-  id: string;
-  name: string;
-  timestamp: number;
-  duration: number;
-  eventCount: number;
-  events: eventWithTime[];
-  privacyConfig: PrivacyConfig;
-}
-
-export interface AppSettings {
-  defaultPrivacyConfig: PrivacyConfig;
-  maxStorageSize: number; // in MB
-  autoSave: boolean;
-  samplingConfig: {
-    mousemove: boolean;
-    mouseInteraction: boolean;
-    scroll: number;
-    input: string;
-  };
-}
+// Re-export types for local use (with web-specific storage implementation)
+export type SessionRecording = CoreSessionRecording;
+export type AppSettings = CoreAppSettings;
+export type { StorageStats, PrivacyConfig };
 
 const STORAGE_KEY_SESSIONS = 'rrweb_sessions';
 const STORAGE_KEY_SETTINGS = 'rrweb_settings';
 const MAX_STORAGE_MB = 50; // Default max storage
 
-// Calculate size of data in MB
-function getDataSizeMB(data: unknown): number {
-  const str = JSON.stringify(data);
-  const bytes = new Blob([str]).size;
-  return bytes / (1024 * 1024);
-}
+// Use core utility for size calculation
+const getDataSizeMB = calculateDataSizeMB;
 
 // Get all sessions from localStorage
 export function getAllSessions(): SessionRecording[] {
@@ -170,23 +155,11 @@ export function saveSettings(settings: Partial<AppSettings>): void {
   }
 }
 
-// Get default settings
+// Get default settings (use core defaults with web-specific overrides)
 function getDefaultSettings(): AppSettings {
   return {
-    defaultPrivacyConfig: {
-      maskAllInputs: false,
-      blockSensitiveElements: false,
-      maskTextPatterns: false,
-      customMaskFn: false,
-    },
+    ...DEFAULT_APP_SETTINGS,
     maxStorageSize: MAX_STORAGE_MB,
-    autoSave: true,
-    samplingConfig: {
-      mousemove: true,
-      mouseInteraction: true,
-      scroll: 150,
-      input: 'last',
-    },
   };
 }
 

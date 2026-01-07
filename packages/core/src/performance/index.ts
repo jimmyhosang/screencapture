@@ -44,7 +44,8 @@ export interface SamplingConfig {
  * The function will only be called after the specified delay has passed
  * since the last invocation.
  */
-export function debounce<T extends (...args: unknown[]) => unknown>(
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function debounce<T extends (...args: any[]) => any>(
   fn: T,
   delay: number
 ): T & { cancel: () => void; flush: () => void } {
@@ -93,7 +94,8 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
  * Creates a throttled version of a function.
  * The function will be called at most once per specified interval.
  */
-export function throttle<T extends (...args: unknown[]) => unknown>(
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function throttle<T extends (...args: any[]) => any>(
   fn: T,
   interval: number
 ): T & { cancel: () => void } {

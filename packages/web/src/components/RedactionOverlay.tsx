@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { detectPII } from '../utils/piiDetector';
+import { detectPII } from '@screencapture/core';
 import type { RecorderConfig } from '../hooks/useRecorder';
 import './RedactionOverlay.css';
 
@@ -120,7 +120,7 @@ export function RedactionOverlay({
           const piiResult = detectPII(text);
           if (piiResult.hasPII) {
             // Check if any of the detected types are configured for redaction
-            const activeTypes = piiResult.types.filter((type) => {
+            const activeTypes = piiResult.types.filter((type: string) => {
               const redactionConfig = config.redactionConfig;
               if (!redactionConfig) return false;
               return (

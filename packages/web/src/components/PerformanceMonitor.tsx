@@ -4,7 +4,7 @@ import {
   formatBytes,
   getActualMemoryUsage,
   type PerformanceMetrics,
-} from '../utils/performanceUtils';
+} from '@screencapture/core';
 import './PerformanceMonitor.css';
 
 // =============================================================================

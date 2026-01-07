@@ -11,9 +11,9 @@
 import { useCallback, useRef, useState, useEffect } from 'react';
 import * as rrweb from 'rrweb';
 import type { eventWithTime } from '@rrweb/types';
-import { redactWithConfig } from '../utils/redactor';
-import type { RedactionConfig } from '../utils/redactor';
 import {
+  redactWithConfig,
+  type RedactionConfig,
   debounce,
   throttle,
   recordEventCapture,
@@ -24,7 +24,7 @@ import {
   isLargeText,
   type SamplingConfig,
   type PerformanceMetrics,
-} from '../utils/performanceUtils';
+} from '@screencapture/core';
 import { getPIIWorkerManager, terminatePIIWorkers } from '../utils/piiWorkerManager';
 
 // =============================================================================

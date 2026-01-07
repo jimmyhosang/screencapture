@@ -1,8 +1,11 @@
 import { useCallback, useRef, useState } from 'react';
 import * as rrweb from 'rrweb';
 import type { eventWithTime } from '@rrweb/types';
-import { redactWithConfig, DEFAULT_REDACTION_CONFIG } from '../utils/redactor';
-import type { RedactionConfig } from '../utils/redactor';
+import {
+  redactWithConfig,
+  DEFAULT_REDACTION_CONFIG,
+  type RedactionConfig,
+} from '@screencapture/core';
 
 /**
  * Configuration for the session recorder with privacy options.

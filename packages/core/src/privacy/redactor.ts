@@ -440,7 +440,7 @@ function calculateConfidence(
 /**
  * Validates a credit card number using the Luhn algorithm.
  */
-function luhnValidate(cardNumber: string): boolean {
+export function luhnValidate(cardNumber: string): boolean {
   const digits = cardNumber.replace(/\D/g, '');
 
   if (digits.length < 13 || digits.length > 19) {
@@ -470,7 +470,7 @@ function luhnValidate(cardNumber: string): boolean {
 /**
  * Validates IBAN checksum.
  */
-function validateIBAN(iban: string): boolean {
+export function validateIBAN(iban: string): boolean {
   const cleaned = iban.replace(/\s/g, '').toUpperCase();
   if (cleaned.length < 15 || cleaned.length > 34) {
     return false;
@@ -578,10 +578,7 @@ export function redactIPv6(text: string): string {
  * Redacts a date of birth while preserving the year.
  */
 export function redactDateOfBirth(text: string): string {
-  return text.replace(DOB_PATTERN, (match) => {
-    // Extract year (last 4 digits that look like a year)
-    const yearMatch = match.match(/(?:19|20)\d{2}/);
-    const year = yearMatch ? yearMatch[0] : '****';
+  return text.replace(DOB_PATTERN, () => {
     return `**/**/****`;
   });
 }
