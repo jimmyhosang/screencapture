@@ -1,0 +1,268 @@
+.app {
+  min-height: 100vh;
+  padding: 2rem;
+  background: linear-gradient(135deg, #0d0d1a 0%, #1a1a2e 100%);
+}
+
+.app-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.app-header h1 {
+  font-size: 2.5rem;
+  margin: 0;
+  background: linear-gradient(120deg, #646cff, #61dafb);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  color: #888;
+  margin-top: 0.5rem;
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.control-btn {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  background: #646cff;
+  color: white;
+}
+
+.control-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(100, 108, 255, 0.4);
+}
+
+.control-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.control-btn.recording {
+  background: #ff4757;
+}
+
+.control-btn.recording:hover {
+  box-shadow: 0 4px 12px rgba(255, 71, 87, 0.4);
+}
+
+.control-btn.play-btn {
+  background: #2ed573;
+}
+
+.control-btn.play-btn:hover:not(:disabled) {
+  box-shadow: 0 4px 12px rgba(46, 213, 115, 0.4);
+}
+
+.record-indicator {
+  width: 10px;
+  height: 10px;
+  background: white;
+  border-radius: 50%;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* Demo Section */
+.demo-section {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.demo-section h2 {
+  text-align: center;
+  color: #fff;
+  margin-bottom: 0.5rem;
+}
+
+.demo-hint {
+  text-align: center;
+  color: #888;
+  margin-bottom: 1.5rem;
+}
+
+.demo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.demo-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.demo-card h3 {
+  margin: 0 0 1rem;
+  color: #fff;
+  font-size: 1rem;
+}
+
+/* Counter */
+.counter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.counter button {
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 8px;
+  background: #646cff;
+  color: white;
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.counter button:hover {
+  transform: scale(1.1);
+}
+
+.counter-value {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #fff;
+  min-width: 60px;
+  text-align: center;
+}
+
+/* Input */
+.demo-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  color: #fff;
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+
+.demo-input:focus {
+  outline: none;
+  border-color: #646cff;
+}
+
+.demo-input::placeholder {
+  color: #666;
+}
+
+.input-preview {
+  margin-top: 0.75rem;
+  padding: 0.5rem;
+  background: rgba(100, 108, 255, 0.1);
+  border-radius: 4px;
+  color: #a5a8ff;
+  font-size: 0.875rem;
+}
+
+/* Hover Grid */
+.hover-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.hover-box {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.hover-box.box-1 {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+.hover-box.box-2 {
+  background: linear-gradient(135deg, #f093fb, #f5576c);
+}
+
+.hover-box.box-3 {
+  background: linear-gradient(135deg, #4facfe, #00f2fe);
+}
+
+.hover-box.box-4 {
+  background: linear-gradient(135deg, #43e97b, #38f9d7);
+}
+
+.hover-box:hover {
+  transform: scale(1.1) rotate(5deg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* Scroll Box */
+.scroll-box {
+  max-height: 150px;
+  overflow-y: auto;
+  padding: 0.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+.scroll-box p {
+  margin: 0;
+  padding: 0.5rem;
+  color: #aaa;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.scroll-box p:last-child {
+  border-bottom: none;
+}
+
+.scroll-box::-webkit-scrollbar {
+  width: 8px;
+}
+
+.scroll-box::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.scroll-box::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.scroll-box::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
