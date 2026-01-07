@@ -1,23 +1,72 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRecorder, DEFAULT_PRIVACY_CONFIG } from './hooks/useRecorder';
 import type { PrivacyConfig } from './hooks/useRecorder';
+import { useSessionManager } from './hooks/useSessionManager';
 import { PlayerModal } from './components/PlayerModal';
+import { SessionHistory } from './components/SessionHistory';
+import { Settings } from './components/Settings';
+import { getSettings } from './utils/sessionStorage';
 import './App.css';
 
 function App() {
   const { isRecording, events, startRecording, stopRecording, clearEvents } = useRecorder();
+  const sessionManager = useSessionManager();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [count, setCount] = useState(0);
   const [inputValue, setInputValue] = useState('');
   const [privacyConfig, setPrivacyConfig] = useState<PrivacyConfig>(DEFAULT_PRIVACY_CONFIG);
+  const [sessionName, setSessionName] = useState('');
+  const [showSavePrompt, setShowSavePrompt] = useState(false);
+
+  const recordingStartTime = useRef<number>(0);
+
+  // Load default privacy config from settings
+  useEffect(() => {
+    const settings = getSettings();
+    setPrivacyConfig(settings.defaultPrivacyConfig);
+  }, []);
 
   const handleToggleRecording = () => {
     if (isRecording) {
-      stopRecording();
+      const recordedEvents = stopRecording();
+      const duration = Date.now() - recordingStartTime.current;
+
+      // Check if auto-save is enabled
+      const settings = getSettings();
+      if (settings.autoSave && recordedEvents.length >= 2) {
+        const autoName = `Recording ${new Date().toLocaleString()}`;
+        sessionManager.saveCurrentRecording(autoName, recordedEvents, privacyConfig, duration);
+      } else if (recordedEvents.length >= 2) {
+        // Show save prompt
+        setShowSavePrompt(true);
+      }
     } else {
       clearEvents();
+      recordingStartTime.current = Date.now();
       startRecording(privacyConfig);
     }
+  };
+
+  const handleSaveRecording = () => {
+    const duration = Date.now() - recordingStartTime.current;
+    const name = sessionName.trim() || `Recording ${new Date().toLocaleString()}`;
+    const success = sessionManager.saveCurrentRecording(name, events, privacyConfig, duration);
+
+    if (success) {
+      setShowSavePrompt(false);
+      setSessionName('');
+      clearEvents();
+    } else {
+      alert('Failed to save recording. Storage limit may be exceeded.');
+    }
+  };
+
+  const handleDiscardRecording = () => {
+    setShowSavePrompt(false);
+    setSessionName('');
+    clearEvents();
   };
 
   const handleOpenPlayer = () => {
@@ -27,16 +76,54 @@ function App() {
     setIsModalOpen(true);
   };
 
+  const handlePlaySession = (id: string) => {
+    sessionManager.loadSession(id);
+    setIsModalOpen(true);
+  };
+
+  const handleImportSession = async (file: File) => {
+    const success = await sessionManager.importSessionFromFile(file);
+    if (!success) {
+      alert('Failed to import session file.');
+    }
+  };
+
   const updatePrivacyConfig = (key: keyof PrivacyConfig) => {
     setPrivacyConfig((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const playbackEvents = sessionManager.currentSession?.events || events;
+
   return (
     <div className="app">
       <header className="app-header">
-        <h1>rrweb Session Recorder</h1>
-        <p className="subtitle">Record and replay user sessions with privacy controls</p>
+        <div>
+          <h1>rrweb Session Recorder</h1>
+          <p className="subtitle">Record and replay user sessions with privacy controls</p>
+        </div>
+        <button className="settings-icon-btn" onClick={() => setIsSettingsOpen(true)} title="Settings">
+          ⚙️
+        </button>
       </header>
+
+      {/* Main Content Grid */}
+      <div className="main-content">
+        <div className="left-panel">
+          {/* Session History */}
+          <SessionHistory
+            sessions={sessionManager.sessions}
+            currentSessionId={sessionManager.currentSession?.id || null}
+            storageStats={sessionManager.storageStats}
+            onPlay={handlePlaySession}
+            onDelete={sessionManager.deleteSessionById}
+            onExport={sessionManager.exportSessionById}
+            onImport={handleImportSession}
+            onExportAll={sessionManager.exportAll}
+            onClearAll={sessionManager.clearAllSessions}
+          />
+        </div>
+
+        <div className="right-panel">
 
       {/* Privacy Settings Panel */}
       <div className="privacy-panel">
@@ -220,10 +307,53 @@ function App() {
         </div>
       </div>
 
+          </div>
+        </div>
+      </div>
+
+      {/* Save Recording Prompt */}
+      {showSavePrompt && (
+        <div className="save-prompt-overlay" onClick={handleDiscardRecording}>
+          <div className="save-prompt-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Save Recording?</h3>
+            <p>Give your recording a name or save with default name</p>
+            <input
+              type="text"
+              value={sessionName}
+              onChange={(e) => setSessionName(e.target.value)}
+              placeholder="Recording name (optional)"
+              className="save-input"
+              autoFocus
+            />
+            <div className="save-actions">
+              <button className="save-action-btn discard-btn" onClick={handleDiscardRecording}>
+                Discard
+              </button>
+              <button className="save-action-btn save-btn" onClick={handleSaveRecording}>
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Player Modal */}
       <PlayerModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        events={events}
+        onClose={() => {
+          setIsModalOpen(false);
+          sessionManager.loadSession(''); // Clear current session
+        }}
+        events={playbackEvents}
+      />
+
+      {/* Settings Modal */}
+      <Settings
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        onSettingsChange={(settings) => {
+          setPrivacyConfig(settings.defaultPrivacyConfig);
+        }}
       />
     </div>
   );
