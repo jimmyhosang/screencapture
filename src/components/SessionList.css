@@ -330,3 +330,243 @@
   color: #888;
   font-weight: 500;
 }
+
+/* Header button styles */
+.header-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.header-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+/* Session list title */
+.session-list-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.session-count {
+  font-size: 12px;
+  color: #666;
+  font-weight: normal;
+}
+
+/* Settings panel */
+.session-list-settings {
+  margin-bottom: 16px;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Sort controls */
+.sort-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.sort-btn {
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  color: #888;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sort-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #aaa;
+}
+
+.sort-btn--active {
+  background: rgba(100, 108, 255, 0.15);
+  border-color: rgba(100, 108, 255, 0.3);
+  color: #a5a8ff;
+}
+
+.sort-btn--select {
+  margin-left: auto;
+}
+
+/* Bulk actions */
+.bulk-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(100, 108, 255, 0.1);
+  border: 1px solid rgba(100, 108, 255, 0.25);
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.bulk-count {
+  font-size: 13px;
+  color: #a5a8ff;
+  font-weight: 500;
+}
+
+.bulk-btn {
+  padding: 5px 12px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.bulk-btn--delete {
+  background: rgba(255, 71, 87, 0.2);
+  border: 1px solid rgba(255, 71, 87, 0.3);
+  color: #ff6b7a;
+}
+
+.bulk-btn--delete:hover {
+  background: rgba(255, 71, 87, 0.3);
+}
+
+.bulk-btn--cancel {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #888;
+}
+
+.bulk-btn--cancel:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #aaa;
+}
+
+/* Session checkbox */
+.session-checkbox {
+  margin-right: 12px;
+}
+
+.session-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+/* Selected and expired states */
+.session-item--selected {
+  background: rgba(100, 108, 255, 0.08);
+  border-color: rgba(100, 108, 255, 0.25);
+}
+
+.session-item--expired {
+  opacity: 0.7;
+}
+
+.session-badge--expired {
+  background: rgba(255, 171, 0, 0.2);
+  color: #ffab00;
+}
+
+/* Relative time */
+.session-relative-time {
+  font-weight: 500;
+  color: #fff;
+  font-size: 14px;
+}
+
+/* Meta divider */
+.session-divider {
+  color: #444;
+}
+
+/* Size display */
+.session-size {
+  color: #666;
+}
+
+/* Clickable session info */
+.session-info {
+  cursor: pointer;
+}
+
+.session-info:hover .session-relative-time {
+  color: #a5a8ff;
+}
+
+/* Footer */
+.session-list-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.footer-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.footer-btn--cleanup {
+  background: rgba(255, 171, 0, 0.15);
+  border: 1px solid rgba(255, 171, 0, 0.3);
+  color: #ffab00;
+}
+
+.footer-btn--cleanup:hover {
+  background: rgba(255, 171, 0, 0.25);
+}
+
+.footer-btn--clear {
+  background: rgba(255, 71, 87, 0.1);
+  border: 1px solid rgba(255, 71, 87, 0.2);
+  color: #ff6b7a;
+}
+
+.footer-btn--clear:hover {
+  background: rgba(255, 71, 87, 0.2);
+}
+
+/* Clear all confirm */
+.clear-all-confirm {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #ff6b7a;
+}
+
+.clear-all-confirm .confirm-btn {
+  padding: 5px 12px;
+  font-size: 12px;
+}

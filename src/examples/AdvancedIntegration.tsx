@@ -256,7 +256,7 @@ interface UseAdvancedRecorderReturn {
   /** Clear events */
   clearEvents: () => void;
   /** Save current session */
-  saveCurrentSession: (name?: string) => RecordedSession | null;
+  saveCurrentSession: () => RecordedSession | null;
   /** Active configuration */
   config: OptimizedRecorderConfig;
 }
@@ -371,7 +371,7 @@ export function useAdvancedRecorder(
 
   // Manual save function
   const saveCurrentSession = useCallback(
-    (_name?: string): RecordedSession | null => {
+    (): RecordedSession | null => {
       if (events.length < 2) {
         console.warn('Not enough events to save');
         return null;

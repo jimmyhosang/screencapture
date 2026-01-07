@@ -11,6 +11,50 @@ import type { RedactionConfig } from './redactor';
 
 const STORAGE_KEY_PREFIX = 'rrweb_session_';
 const SESSION_INDEX_KEY = 'rrweb_session_index';
+const STORAGE_SETTINGS_KEY = 'rrweb_storage_settings';
+
+// =============================================================================
+// Storage Policy Types
+// =============================================================================
+
+/**
+ * Configuration for session storage policies.
+ */
+export interface StorageSettings {
+  /** Maximum number of sessions to keep (0 = unlimited) */
+  maxSessions: number;
+  /** Number of days to retain sessions (0 = unlimited) */
+  retentionDays: number;
+  /** Whether to auto-save sessions when recording stops */
+  autoSave: boolean;
+  /** Minimum session duration in ms to save (filters out very short recordings) */
+  minDurationMs: number;
+  /** Minimum number of events required to save */
+  minEvents: number;
+}
+
+/**
+ * Default storage settings.
+ */
+export const DEFAULT_STORAGE_SETTINGS: StorageSettings = {
+  maxSessions: 50,
+  retentionDays: 30,
+  autoSave: true,
+  minDurationMs: 1000,
+  minEvents: 5,
+};
+
+/**
+ * Result of a cleanup operation.
+ */
+export interface CleanupResult {
+  /** Number of sessions deleted */
+  deletedCount: number;
+  /** IDs of deleted sessions */
+  deletedIds: string[];
+  /** Reason for each deletion */
+  reasons: Record<string, 'expired' | 'overflow' | 'manual'>;
+}
 
 /**
  * Metadata about the recording environment.
@@ -469,4 +513,313 @@ export function formatDuration(ms: number): string {
   }
 
   return `${minutes}m ${seconds}s`;
+}
+
+// =============================================================================
+// Storage Settings Management
+// =============================================================================
+
+/**
+ * Gets the current storage settings.
+ *
+ * @returns Current storage settings or defaults if not set
+ */
+export function getStorageSettings(): StorageSettings {
+  try {
+    const saved = localStorage.getItem(STORAGE_SETTINGS_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return { ...DEFAULT_STORAGE_SETTINGS, ...parsed };
+    }
+  } catch {
+    // Return defaults on error
+  }
+  return { ...DEFAULT_STORAGE_SETTINGS };
+}
+
+/**
+ * Saves storage settings to localStorage.
+ *
+ * @param settings - Partial settings to update
+ * @returns The updated settings
+ */
+export function saveStorageSettings(settings: Partial<StorageSettings>): StorageSettings {
+  const current = getStorageSettings();
+  const updated = { ...current, ...settings };
+  localStorage.setItem(STORAGE_SETTINGS_KEY, JSON.stringify(updated));
+  return updated;
+}
+
+/**
+ * Resets storage settings to defaults.
+ */
+export function resetStorageSettings(): StorageSettings {
+  localStorage.setItem(STORAGE_SETTINGS_KEY, JSON.stringify(DEFAULT_STORAGE_SETTINGS));
+  return { ...DEFAULT_STORAGE_SETTINGS };
+}
+
+// =============================================================================
+// Auto-Cleanup Functions
+// =============================================================================
+
+/**
+ * Gets sessions that have expired based on retention policy.
+ *
+ * @param retentionDays - Number of days to retain (0 = unlimited)
+ * @returns Array of expired session IDs
+ */
+export function getExpiredSessions(retentionDays: number): string[] {
+  if (retentionDays <= 0) return [];
+
+  const cutoffTime = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
+  const expiredIds: string[] = [];
+  const index = getSessionIndex();
+
+  for (const id of index) {
+    const session = loadSession(id);
+    if (session && session.startTime < cutoffTime) {
+      expiredIds.push(id);
+    }
+  }
+
+  return expiredIds;
+}
+
+/**
+ * Gets sessions that exceed the max session limit (oldest first).
+ *
+ * @param maxSessions - Maximum number of sessions to keep (0 = unlimited)
+ * @returns Array of session IDs to delete (oldest ones)
+ */
+export function getOverflowSessions(maxSessions: number): string[] {
+  if (maxSessions <= 0) return [];
+
+  const index = getSessionIndex();
+  if (index.length <= maxSessions) return [];
+
+  // Index is sorted newest first, so take from the end
+  return index.slice(maxSessions);
+}
+
+/**
+ * Performs cleanup based on current storage settings.
+ * Removes expired sessions and enforces max session limit.
+ *
+ * @param settings - Optional settings override (uses saved settings if not provided)
+ * @returns Cleanup result with details of deleted sessions
+ */
+export function cleanupSessions(settings?: StorageSettings): CleanupResult {
+  const config = settings || getStorageSettings();
+  const result: CleanupResult = {
+    deletedCount: 0,
+    deletedIds: [],
+    reasons: {},
+  };
+
+  // First, delete expired sessions
+  const expired = getExpiredSessions(config.retentionDays);
+  for (const id of expired) {
+    deleteSession(id);
+    result.deletedIds.push(id);
+    result.reasons[id] = 'expired';
+  }
+
+  // Then, delete overflow sessions (oldest first)
+  const overflow = getOverflowSessions(config.maxSessions);
+  for (const id of overflow) {
+    if (!result.deletedIds.includes(id)) {
+      deleteSession(id);
+      result.deletedIds.push(id);
+      result.reasons[id] = 'overflow';
+    }
+  }
+
+  result.deletedCount = result.deletedIds.length;
+  return result;
+}
+
+/**
+ * Checks if a session meets the minimum requirements for saving.
+ *
+ * @param events - The recorded events
+ * @param settings - Optional settings override
+ * @returns Whether the session should be saved
+ */
+export function shouldSaveSession(
+  events: eventWithTime[],
+  settings?: StorageSettings
+): boolean {
+  const config = settings || getStorageSettings();
+
+  // Check minimum events
+  if (events.length < config.minEvents) {
+    return false;
+  }
+
+  // Check minimum duration
+  if (events.length >= 2) {
+    const duration = events[events.length - 1].timestamp - events[0].timestamp;
+    if (duration < config.minDurationMs) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Saves a session with automatic cleanup based on storage policies.
+ * This is the recommended function for auto-save functionality.
+ *
+ * @param session - The session to save
+ * @param settings - Optional settings override
+ * @returns Object with save status and any cleanup performed
+ */
+export function saveSessionWithPolicy(
+  session: RecordedSession,
+  settings?: StorageSettings
+): { saved: boolean; cleanup: CleanupResult } {
+  const config = settings || getStorageSettings();
+
+  // Check if session meets requirements
+  if (!shouldSaveSession(session.events, config)) {
+    return {
+      saved: false,
+      cleanup: { deletedCount: 0, deletedIds: [], reasons: {} },
+    };
+  }
+
+  // Perform cleanup before saving
+  const cleanup = cleanupSessions(config);
+
+  // Save the session
+  saveSession(session);
+
+  return { saved: true, cleanup };
+}
+
+// =============================================================================
+// Extended Session Summary
+// =============================================================================
+
+/**
+ * Extended session summary with additional metadata.
+ */
+export interface ExtendedSessionSummary extends SessionSummary {
+  /** Raw start timestamp */
+  startTime: number;
+  /** Relative time string (e.g., "2 hours ago") */
+  relativeTime: string;
+  /** Whether the session is expired based on current retention policy */
+  isExpired: boolean;
+  /** Compressed size in bytes */
+  sizeBytes: number;
+  /** Formatted size string */
+  sizeFormatted: string;
+}
+
+/**
+ * Formats a timestamp as a relative time string.
+ */
+function formatRelativeTime(timestamp: number): string {
+  const now = Date.now();
+  const diff = now - timestamp;
+
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (days > 0) {
+    return days === 1 ? '1 day ago' : `${days} days ago`;
+  }
+  if (hours > 0) {
+    return hours === 1 ? '1 hour ago' : `${hours} hours ago`;
+  }
+  if (minutes > 0) {
+    return minutes === 1 ? '1 minute ago' : `${minutes} minutes ago`;
+  }
+  return 'Just now';
+}
+
+/**
+ * Gets the size of a stored session in bytes.
+ */
+function getSessionSize(id: string): number {
+  const key = STORAGE_KEY_PREFIX + id;
+  const data = localStorage.getItem(key);
+  return data ? data.length * 2 : 0; // UTF-16 is 2 bytes per char
+}
+
+/**
+ * Lists all saved sessions with extended information.
+ *
+ * @returns Array of extended session summaries
+ */
+export function listSessionsExtended(): ExtendedSessionSummary[] {
+  const index = getSessionIndex();
+  const settings = getStorageSettings();
+  const cutoffTime =
+    settings.retentionDays > 0
+      ? Date.now() - settings.retentionDays * 24 * 60 * 60 * 1000
+      : 0;
+
+  const summaries: ExtendedSessionSummary[] = [];
+
+  for (const id of index) {
+    const session = loadSession(id);
+    if (session) {
+      const sizeBytes = getSessionSize(id);
+      summaries.push({
+        id: session.id,
+        date: new Date(session.startTime).toLocaleString(),
+        duration: session.duration,
+        eventCount: session.events.length,
+        url: truncateUrl(session.metadata.url, 50),
+        startTime: session.startTime,
+        relativeTime: formatRelativeTime(session.startTime),
+        isExpired: cutoffTime > 0 && session.startTime < cutoffTime,
+        sizeBytes,
+        sizeFormatted: formatBytes(sizeBytes),
+      });
+    }
+  }
+
+  return summaries;
+}
+
+/**
+ * Gets storage statistics.
+ */
+export interface StorageStats {
+  /** Total number of sessions */
+  totalSessions: number;
+  /** Total storage used */
+  totalSize: { bytes: number; formatted: string };
+  /** Number of expired sessions */
+  expiredCount: number;
+  /** Number of sessions that would be deleted on next cleanup */
+  pendingDeletion: number;
+  /** Current storage settings */
+  settings: StorageSettings;
+}
+
+/**
+ * Gets comprehensive storage statistics.
+ */
+export function getStorageStats(): StorageStats {
+  const settings = getStorageSettings();
+  const sessions = listSessionsExtended();
+  const expired = getExpiredSessions(settings.retentionDays);
+  const overflow = getOverflowSessions(settings.maxSessions);
+
+  const uniquePending = new Set([...expired, ...overflow]);
+
+  return {
+    totalSessions: sessions.length,
+    totalSize: getStorageSize(),
+    expiredCount: expired.length,
+    pendingDeletion: uniquePending.size,
+    settings,
+  };
 }
