@@ -1,18 +1,28 @@
 {
   "name": "@screencapture/extension",
   "version": "1.0.0",
-  "description": "Chrome/Firefox extension for screencapture - session recording in the browser",
+  "description": "Chrome extension for screencapture - session recording in the browser",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "echo 'Extension development not yet configured'",
-    "build": "echo 'Extension build not yet configured'",
-    "lint": "echo 'Extension lint not yet configured'"
+    "dev": "vite build --watch --mode development",
+    "build": "tsc && vite build",
+    "lint": "eslint src/"
   },
   "dependencies": {
-    "@screencapture/core": "workspace:*"
+    "@screencapture/core": "workspace:*",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "rrweb": "^2.0.0-alpha.4"
   },
   "devDependencies": {
-    "typescript": "~5.9.3"
+    "@rrweb/types": "^2.0.0-alpha.4",
+    "@types/chrome": "^0.0.315",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.5",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "typescript": "~5.9.3",
+    "vite": "^7.2.4"
   }
 }
