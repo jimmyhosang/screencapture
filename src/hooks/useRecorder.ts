@@ -14,16 +14,16 @@ export function useRecorder(): UseRecorderReturn {
   const [isRecording, setIsRecording] = useState(false);
   const [events, setEvents] = useState<eventWithTime[]>([]);
   const stopFnRef = useRef<(() => void) | null>(null);
+  const eventsRef = useRef<eventWithTime[]>([]);
 
   const startRecording = useCallback(() => {
     if (isRecording) return;
 
-    const recordedEvents: eventWithTime[] = [];
+    eventsRef.current = [];
 
     const stopFn = rrweb.record({
       emit(event) {
-        recordedEvents.push(event);
-        setEvents([...recordedEvents]);
+        eventsRef.current.push(event);
       },
       // Record all mutations including text input
       maskAllInputs: false,
@@ -51,8 +51,9 @@ export function useRecorder(): UseRecorderReturn {
       stopFnRef.current = null;
     }
     setIsRecording(false);
-    return events;
-  }, [events]);
+    setEvents([...eventsRef.current]);
+    return eventsRef.current;
+  }, []);
 
   const clearEvents = useCallback(() => {
     setEvents([]);
