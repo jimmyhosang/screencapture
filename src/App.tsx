@@ -309,7 +309,7 @@ function App() {
 
           </div>
         </div>
-      </div>
+
 
       {/* Save Recording Prompt */}
       {showSavePrompt && (
