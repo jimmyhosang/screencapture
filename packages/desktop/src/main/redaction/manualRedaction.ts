@@ -17,8 +17,45 @@ import type {
   DetectedWindow,
   BoundingBox,
   PROFILE_VERSION,
-  DEFAULT_APP_BLOCK_RULES,
 } from './types';
+
+// ============================================================================
+// Default Constants
+// ============================================================================
+
+const DEFAULT_APP_BLOCK_RULES: AppBlockRule[] = [
+  {
+    id: 'slack-default',
+    name: 'Slack Messages',
+    matchType: 'contains',
+    pattern: 'Slack',
+    action: 'blur',
+    enabled: false,
+    createdAt: Date.now(),
+  },
+  {
+    id: 'password-manager',
+    name: 'Password Managers',
+    matchType: 'regex',
+    pattern: '(1Password|LastPass|Bitwarden|KeePass)',
+    action: 'solid',
+    color: '#000000',
+    enabled: false,
+    createdAt: Date.now(),
+  },
+  {
+    id: 'private-browsing',
+    name: 'Private/Incognito Browsing',
+    matchType: 'regex',
+    pattern: '(Private|Incognito)',
+    action: 'solid',
+    color: '#000000',
+    enabled: false,
+    createdAt: Date.now(),
+  },
+];
+
+export { DEFAULT_APP_BLOCK_RULES };
 
 // ============================================================================
 // Storage Paths
@@ -618,40 +655,4 @@ export function terminateManualRedactionManager(): void {
   managerInstance = null;
 }
 
-// ============================================================================
-// Default exports
-// ============================================================================
 
-const DEFAULT_APP_BLOCK_RULES_IMPL: AppBlockRule[] = [
-  {
-    id: 'slack-default',
-    name: 'Slack Messages',
-    matchType: 'contains',
-    pattern: 'Slack',
-    action: 'blur',
-    enabled: false,
-    createdAt: Date.now(),
-  },
-  {
-    id: 'password-manager',
-    name: 'Password Managers',
-    matchType: 'regex',
-    pattern: '(1Password|LastPass|Bitwarden|KeePass)',
-    action: 'solid',
-    color: '#000000',
-    enabled: false,
-    createdAt: Date.now(),
-  },
-  {
-    id: 'private-browsing',
-    name: 'Private/Incognito Browsing',
-    matchType: 'regex',
-    pattern: '(Private|Incognito)',
-    action: 'solid',
-    color: '#000000',
-    enabled: false,
-    createdAt: Date.now(),
-  },
-];
-
-export { DEFAULT_APP_BLOCK_RULES_IMPL as DEFAULT_APP_BLOCK_RULES };

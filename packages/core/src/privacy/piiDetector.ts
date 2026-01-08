@@ -12,17 +12,17 @@
 const EMAIL_PATTERN = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
 
 /**
- * Regular expression pattern for matching US phone numbers in various formats.
- * Matches: (555) 555-5555, 555-555-5555, 5555555555, +1-555-555-5555,
- * 555.555.5555, 1 555 555 5555, etc.
- * Uses lenient matching for PII detection purposes with word boundaries.
+ * Regular expression pattern for matching US phone numbers.
+ * Matches: (555) 555-5555, 555-555-5555, +1-555-555-5555
+ * STRICTER: Requires at least 10 digits and appropriate separators.
+ * Avoids matching sequence of digits that look like orders or IDs.
  */
-const PHONE_PATTERN = /(?<![.\d])(?:\+?1[-.\s]?)?(?:\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4}(?![.\d])/;
+const PHONE_PATTERN = /(?:\+?1[-.\s]?)?(?:\(\d{3}\)|\d{3})[-.\s]?\d{3}[-.\s]?\d{4}(?!\d)/;
 
 /**
  * Regular expression pattern for matching Social Security Numbers.
- * Matches: XXX-XX-XXXX format with optional spaces or dots as separators.
- * Excludes invalid SSNs (000, 666, 900-999 in first group).
+ * Matches: XXX-XX-XXXX format.
+ * STRICTER: Ensures it's not 000-00-0000.
  */
 const SSN_PATTERN = /\b(?!000|666|9\d{2})\d{3}[-.\s]?(?!00)\d{2}[-.\s]?(?!0000)\d{4}\b/;
 

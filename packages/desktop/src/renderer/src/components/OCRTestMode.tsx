@@ -79,8 +79,13 @@ function OCRTestMode({ onClose }: OCRTestModeProps): JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
 
-  // Initialize OCR engine and get PII colors
+  // Check if running in Electron with window.api available
+  const isElectron = typeof window !== 'undefined' && window.api?.ocr;
+
+  // Initialize OCR engine and get PII colors (only if Electron)
   useEffect(() => {
+    if (!isElectron) return;
+
     const init = async () => {
       try {
         const result = await window.api.ocr.initialize();
@@ -97,9 +102,38 @@ function OCRTestMode({ onClose }: OCRTestModeProps): JSX.Element {
     init();
 
     return () => {
-      window.api.ocr.terminate();
+      if (isElectron) {
+        window.api.ocr.terminate();
+      }
     };
-  }, []);
+  }, [isElectron]);
+
+  // If not in Electron, show fallback UI
+  if (!isElectron) {
+    return (
+      <div className="modal-overlay" onClick={onClose}>
+        <div className="ocr-test-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+          <div className="ocr-test-header">
+            <h2>OCR Test Mode</h2>
+            <button className="btn-icon" onClick={onClose}>✕</button>
+          </div>
+          <div style={{
+            padding: '32px',
+            textAlign: 'center',
+            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+            borderRadius: '8px',
+            margin: '16px'
+          }}>
+            <p style={{ fontSize: '18px', marginBottom: '8px' }}>⚠️ Electron Required</p>
+            <p style={{ opacity: 0.8 }}>OCR features require the native Electron application.</p>
+            <p style={{ opacity: 0.6, fontSize: '14px', marginTop: '12px' }}>
+              Run <code>pnpm --filter @screencapture/desktop dev</code> to start the full app.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Load image and draw on canvas
   const loadImage = useCallback((dataUrl: string) => {

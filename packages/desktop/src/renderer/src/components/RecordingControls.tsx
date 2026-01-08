@@ -23,10 +23,37 @@ export default function RecordingControls({ onRecordingComplete }: RecordingCont
         blockSensitive: true
     });
 
-    // Check recording state on mount
+    // Check if running in Electron with window.api available
+    const isElectron = typeof window !== 'undefined' && window.api?.recording;
+
+    // Check recording state on mount (only if Electron)
     useEffect(() => {
-        window.api.recording.isActive().then(setIsRecording);
-    }, []);
+        if (isElectron) {
+            window.api.recording.isActive().then(setIsRecording);
+        }
+    }, [isElectron]);
+
+    // If not in Electron, show fallback UI
+    if (!isElectron) {
+        return (
+            <div className="recording-controls">
+                <h2>🎥 Record Session</h2>
+                <div className="error-message" style={{
+                    padding: '24px',
+                    textAlign: 'center',
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    borderRadius: '8px',
+                    marginTop: '16px'
+                }}>
+                    <p style={{ fontSize: '18px', marginBottom: '8px' }}>⚠️ Electron Required</p>
+                    <p style={{ opacity: 0.8 }}>Recording features require the native Electron application.</p>
+                    <p style={{ opacity: 0.6, fontSize: '14px', marginTop: '12px' }}>
+                        Run <code>pnpm --filter @screencapture/desktop dev</code> to start the full app.
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     const handleStart = async () => {
         if (!url || url === 'https://') {
