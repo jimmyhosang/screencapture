@@ -21,6 +21,11 @@ import type {
   TimelineEvent,
   DetectedWindow,
 } from '../main/redaction/types';
+import type {
+  PerformanceConfig,
+  PerformanceSnapshot,
+  FrameMetrics
+} from '../main/performance';
 
 // Expose protected methods that allow the renderer process to use
 // ipcRenderer without exposing the entire object
@@ -293,6 +298,60 @@ const api = {
       ipcRenderer.invoke('manual:importProfile'),
     applyProfile: (recordingId: string, profileId: string): Promise<boolean> =>
       ipcRenderer.invoke('manual:applyProfile', recordingId, profileId)
+  },
+
+  // Performance monitoring operations
+  performance: {
+    getConfig: (): Promise<PerformanceConfig> =>
+      ipcRenderer.invoke('performance:getConfig'),
+    setConfig: (config: Partial<PerformanceConfig>): Promise<void> =>
+      ipcRenderer.invoke('performance:setConfig', config),
+    getLatestSnapshot: (): Promise<PerformanceSnapshot | null> =>
+      ipcRenderer.invoke('performance:getLatestSnapshot'),
+    getSnapshots: (count?: number): Promise<PerformanceSnapshot[]> =>
+      ipcRenderer.invoke('performance:getSnapshots', count),
+    getFrameMetrics: (count?: number): Promise<FrameMetrics[]> =>
+      ipcRenderer.invoke('performance:getFrameMetrics', count),
+    recordFrame: (metrics: Omit<FrameMetrics, 'timestamp'>): Promise<void> =>
+      ipcRenderer.invoke('performance:recordFrame', metrics),
+    setRecordingState: (recording: boolean): Promise<void> =>
+      ipcRenderer.invoke('performance:setRecordingState', recording),
+    reset: (): Promise<void> =>
+      ipcRenderer.invoke('performance:reset'),
+    terminate: (): Promise<void> =>
+      ipcRenderer.invoke('performance:terminate'),
+    onUpdate: (callback: (snapshot: PerformanceSnapshot) => void): void => {
+      ipcRenderer.on('performance:update', (_, snapshot) => callback(snapshot));
+    },
+    removeUpdateListener: (): void => {
+      ipcRenderer.removeAllListeners('performance:update');
+    }
+  },
+
+  // Keyboard shortcuts (received from main process)
+  shortcuts: {
+    onToggleRecording: (callback: () => void): void => {
+      ipcRenderer.on('shortcut:toggle-recording', callback);
+    },
+    onTogglePause: (callback: () => void): void => {
+      ipcRenderer.on('shortcut:toggle-pause', callback);
+    },
+    onScreenshot: (callback: () => void): void => {
+      ipcRenderer.on('shortcut:screenshot', callback);
+    },
+    onTogglePerformance: (callback: () => void): void => {
+      ipcRenderer.on('shortcut:toggle-performance', callback);
+    },
+    // Notify main process of recording state changes
+    notifyRecordingState: (recording: boolean, paused: boolean): void => {
+      ipcRenderer.send('recording:stateChanged', recording, paused);
+    },
+    removeAllListeners: (): void => {
+      ipcRenderer.removeAllListeners('shortcut:toggle-recording');
+      ipcRenderer.removeAllListeners('shortcut:toggle-pause');
+      ipcRenderer.removeAllListeners('shortcut:screenshot');
+      ipcRenderer.removeAllListeners('shortcut:toggle-performance');
+    }
   }
 };
 

@@ -1,10 +1,11 @@
-import { app, shell, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage } from 'electron';
+import { app, shell, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage, globalShortcut } from 'electron';
 import { join } from 'path';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import { initDatabase, getDatabase } from './database';
 import { setupRecordingHandlers } from './recordings';
 import { setupOCRHandlers } from './ocr';
 import { setupRedactionHandlers } from './redaction';
+import { setupPerformanceHandlers } from './performance';
 import type { SessionRecord, SessionStats, AppSettings } from './types';
 
 let mainWindow: BrowserWindow | null = null;
@@ -91,6 +92,110 @@ function createTray(): void {
 
   tray.on('click', () => {
     mainWindow?.show();
+  });
+}
+
+// Recording state for shortcuts and tray
+let isRecording = false;
+let isPaused = false;
+
+function updateTrayMenu(): void {
+  if (!tray) return;
+
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: 'Open Screencapture',
+      click: () => {
+        mainWindow?.show();
+      }
+    },
+    { type: 'separator' },
+    {
+      label: isRecording ? 'Stop Recording' : 'Start Recording',
+      accelerator: 'CommandOrControl+Shift+R',
+      click: () => {
+        mainWindow?.webContents.send('shortcut:toggle-recording');
+        mainWindow?.show();
+      }
+    },
+    {
+      label: isPaused ? 'Resume Recording' : 'Pause Recording',
+      enabled: isRecording,
+      accelerator: 'CommandOrControl+Shift+P',
+      click: () => {
+        mainWindow?.webContents.send('shortcut:toggle-pause');
+      }
+    },
+    { type: 'separator' },
+    {
+      label: 'Import Session...',
+      click: async () => {
+        const result = await dialog.showOpenDialog({
+          properties: ['openFile'],
+          filters: [{ name: 'JSON Files', extensions: ['json'] }]
+        });
+        if (!result.canceled && result.filePaths.length > 0) {
+          mainWindow?.webContents.send('import-session-file', result.filePaths[0]);
+          mainWindow?.show();
+        }
+      }
+    },
+    {
+      label: 'Performance Monitor',
+      click: () => {
+        mainWindow?.webContents.send('shortcut:toggle-performance');
+        mainWindow?.show();
+      }
+    },
+    { type: 'separator' },
+    {
+      label: 'Quit',
+      accelerator: 'CommandOrControl+Q',
+      click: () => {
+        app.isQuitting = true;
+        app.quit();
+      }
+    }
+  ]);
+
+  tray.setContextMenu(contextMenu);
+
+  // Update tooltip based on state
+  if (isRecording) {
+    tray.setToolTip(isPaused ? 'Screencapture - Recording Paused' : 'Screencapture - Recording...');
+  } else {
+    tray.setToolTip('Screencapture');
+  }
+}
+
+function setupKeyboardShortcuts(): void {
+  // Toggle recording: Ctrl/Cmd + Shift + R
+  globalShortcut.register('CommandOrControl+Shift+R', () => {
+    mainWindow?.webContents.send('shortcut:toggle-recording');
+  });
+
+  // Pause/Resume: Ctrl/Cmd + Shift + P
+  globalShortcut.register('CommandOrControl+Shift+P', () => {
+    if (isRecording) {
+      mainWindow?.webContents.send('shortcut:toggle-pause');
+    }
+  });
+
+  // Quick screenshot: Ctrl/Cmd + Shift + S
+  globalShortcut.register('CommandOrControl+Shift+S', () => {
+    mainWindow?.webContents.send('shortcut:screenshot');
+  });
+
+  // Toggle performance monitor: Ctrl/Cmd + Shift + M
+  globalShortcut.register('CommandOrControl+Shift+M', () => {
+    mainWindow?.webContents.send('shortcut:toggle-performance');
+  });
+
+  // Add handlers for updating recording state from renderer
+  ipcMain.on('recording:stateChanged', (_, recording: boolean, paused: boolean) => {
+    isRecording = recording;
+    isPaused = paused;
+    updateTrayMenu();
   });
 }
 
@@ -333,6 +438,8 @@ app.whenReady().then(() => {
   setupRecordingHandlers();
   setupOCRHandlers();
   setupRedactionHandlers();
+  setupPerformanceHandlers();
+  setupKeyboardShortcuts();
 
   // Create window and tray
   createWindow();
@@ -355,4 +462,5 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   app.isQuitting = true;
+  globalShortcut.unregisterAll();
 });
