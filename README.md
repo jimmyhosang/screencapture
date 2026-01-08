@@ -1,562 +1,243 @@
-# React Session Recording with Privacy
+# Screencapture
 
-A React session recording and replay library built on [rrweb](https://www.rrweb.io/) with built-in PII redaction and privacy controls. Capture user sessions for debugging, UX research, and support while protecting sensitive data.
+A comprehensive screen recording and session replay platform with advanced privacy controls, PII detection, and cross-platform support. Built as a monorepo with a Chrome extension, Electron desktop app, and shared core library.
 
-## Features
+## Packages
 
-- **Session Recording**: Capture DOM mutations, user interactions, and network events
-- **Privacy-First**: Built-in PII detection and redaction for emails, phone numbers, SSNs, credit cards
-- **Performance Optimized**: Debounced redaction, Web Workers, sampling strategies
-- **Compliance Ready**: Pre-configured patterns for HIPAA, PCI DSS, and GDPR
-- **Custom Patterns**: Add your own regex patterns with confidence scoring
-- **Replay Player**: Full-featured playback with timeline, speed controls, and event inspection
+| Package | Description |
+|---------|-------------|
+| `@screencapture/desktop` | Electron desktop app with SQLite storage, OCR, and video export |
+| `@screencapture/extension` | Chrome extension for browser session recording |
+| `@screencapture/core` | Shared utilities for PII detection and privacy |
+
+## Key Features
+
+### Privacy-First Recording
+- **Automatic PII Detection**: OCR-based text detection with pattern matching for emails, phone numbers, SSNs, credit cards, and more
+- **Visual Redaction**: Multiple styles (solid, blur, pixelate, pattern) with real-time or post-process modes
+- **Manual Redaction Tools**: Draw regions to mark sensitive areas, with static, tracked, or temporary region types
+- **App/Window Blocking**: Automatically blur specific applications (Slack, Discord, password managers)
+- **Redaction Profiles**: Save and share configurations with presets for HIPAA, Financial, and Demo modes
+
+### Desktop Application
+- **Screen Recording**: Capture screens and windows with configurable quality
+- **OCR Text Detection**: Real-time text recognition for PII scanning
+- **Video Export**: Export recordings with FFmpeg integration
+- **Session Management**: SQLite storage with import/export capabilities
+- **Performance Monitoring**: Real-time FPS, memory, CPU tracking with bottleneck detection
+- **Background Processing**: Async task queue for exports, OCR, and redaction
+- **Quality Presets**: Low (15fps/480p), Medium (24fps/720p), High (30fps/1080p), Ultra (60fps/native)
+- **Global Shortcuts**: Control recording from anywhere with keyboard shortcuts
+- **System Tray**: Quick access to recording controls and status
+
+### Browser Extension
+- **Session Recording**: Capture DOM interactions using rrweb
+- **Privacy Controls**: Mask inputs, block elements, configurable redaction
+- **Session Export**: Save and export recordings as JSON
 
 ## Quick Start
 
-### Installation
+### Desktop App
 
 ```bash
-npm install rrweb rrweb-player @rrweb/types
+# Clone the repository
+git clone https://github.com/jimmyhosang/screencapture.git
+cd screencapture
+
+# Install dependencies
+pnpm install
+
+# Start development
+pnpm --filter @screencapture/desktop dev
+
+# Build for production
+pnpm --filter @screencapture/desktop build
 ```
 
-### Basic Usage
+### Chrome Extension
 
-```tsx
-import { RecordingProvider, RecordingControls } from './examples/BasicIntegration';
+```bash
+# Build the extension
+pnpm --filter @screencapture/extension build
 
-function App() {
-  return (
-    <RecordingProvider>
-      <Header />
-      <RecordingControls />
-      <Main />
-    </RecordingProvider>
-  );
-}
+# Load in Chrome:
+# 1. Open chrome://extensions/
+# 2. Enable "Developer mode"
+# 3. Click "Load unpacked"
+# 4. Select packages/extension/dist
 ```
 
-### Using the Hook Directly
+## Architecture
 
-```tsx
-import { useSessionRecorder, DEFAULT_RECORDER_CONFIG } from './hooks/useRecorder';
-
-function MyComponent() {
-  const { isRecording, events, startRecording, stopRecording } = useSessionRecorder(
-    DEFAULT_RECORDER_CONFIG
-  );
-
-  return (
-    <div>
-      <button onClick={isRecording ? stopRecording : startRecording}>
-        {isRecording ? 'Stop' : 'Start'} Recording
-      </button>
-      <p>Events captured: {events.length}</p>
-    </div>
-  );
-}
+```
+screencapture/
+├── packages/
+│   ├── desktop/              # Electron desktop application
+│   │   ├── src/
+│   │   │   ├── main/         # Electron main process
+│   │   │   │   ├── ocr/      # Text detection services
+│   │   │   │   ├── redaction/# Redaction rendering
+│   │   │   │   ├── workers/  # Background task manager
+│   │   │   │   └── performance/ # Performance monitoring
+│   │   │   ├── preload/      # Context bridge
+│   │   │   └── renderer/     # React UI
+│   │   └── electron.vite.config.ts
+│   │
+│   ├── extension/            # Chrome browser extension
+│   │   ├── src/
+│   │   │   ├── background/   # Service worker
+│   │   │   ├── content/      # Content script (rrweb)
+│   │   │   └── popup/        # React popup UI
+│   │   └── vite.config.ts
+│   │
+│   └── core/                 # Shared utilities
+│       └── src/
+│           └── utils/        # PII detection, redaction
+│
+└── src/                      # Web app (React + rrweb)
+    ├── hooks/                # Recording hooks
+    ├── components/           # UI components
+    └── utils/                # Utilities
 ```
 
-## API Reference
+## Desktop App Features
 
-### Hooks
+### Performance Monitoring
 
-#### `useSessionRecorder(config: RecorderConfig)`
+Real-time tracking with three view modes:
 
-The primary hook for session recording with privacy features.
+- **Summary**: Quick stats (FPS, frame time, memory, CPU)
+- **Detailed**: Processing pipeline breakdown (capture, OCR, PII scan, redaction times)
+- **Chart**: Historical graphs for FPS, memory, and frame time
+
+### Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl+Shift+R` | Start/Stop Recording |
+| `Ctrl+Shift+P` | Pause/Resume Recording |
+| `Ctrl+Shift+S` | Quick Screenshot |
+| `Ctrl+Shift+M` | Toggle Performance Monitor |
+
+### Redaction System
+
+**Automatic Detection:**
+- Email addresses
+- Phone numbers (US formats)
+- Social Security Numbers
+- Credit card numbers
+- Dates of birth
+- Custom patterns via regex
+
+**Manual Tools:**
+- Rectangle drawing tool for region marking
+- Region types: static, tracked (follows content), temporary
+- Timeline editor for time-based redactions
+- App blocking rules with pattern matching
+
+**Redaction Styles:**
+- Solid color overlay
+- Gaussian blur (configurable intensity)
+- Pixelation
+- Pattern fill
+
+### Quality Options
+
+| Preset | Frame Rate | Resolution | Est. Size |
+|--------|------------|------------|-----------|
+| Low | 15 fps | 480p | ~50MB/hr |
+| Medium | 24 fps | 720p | ~150MB/hr |
+| High | 30 fps | 1080p | ~350MB/hr |
+| Ultra | 60 fps | Native | ~700MB/hr |
+
+### Background Tasks
+
+Heavy operations run in the background with:
+- Priority-based queuing (high/normal/low)
+- Progress tracking with real-time updates
+- Cancellation support
+- Task types: export, redaction, OCR, thumbnail, analysis
+
+## Privacy Compliance
+
+### Built-in Presets
+
+- **HIPAA Compliant**: SSN, DOB, medical record numbers, addresses
+- **Financial Privacy**: SSN, credit cards, bank accounts, tax IDs
+- **Demo Mode**: Email, phone (minimal redaction for demos)
+
+### Custom Patterns
 
 ```typescript
-interface RecorderConfig {
-  maskAllInputs: boolean;      // Mask input field values (default: true)
-  maskTextContent: boolean;    // Mask text matching PII patterns (default: true)
-  blockSelectors: string[];    // Elements to completely exclude
-  redactionConfig: RedactionConfig;
-  maskTextSelectors: string[]; // Elements to always mask
-  inlineStylesheet: boolean;   // Inline styles for accurate replay
-}
-
-interface UseSessionRecorderReturn {
-  isRecording: boolean;
-  events: eventWithTime[];
-  startRecording: () => void;
-  stopRecording: () => eventWithTime[];
-  clearEvents: () => void;
-  config: RecorderConfig;
-}
-```
-
-#### `useOptimizedRecorder(config: OptimizedRecorderConfig)`
-
-Performance-optimized recording with sampling and metrics.
-
-```typescript
-interface OptimizedRecorderConfig extends RecorderConfig {
-  sampling: SamplingConfig;      // Event sampling strategy
-  redactionDebounceMs: number;   // Debounce delay (default: 50)
-  useWorkers: boolean;           // Use Web Workers (default: true)
-  workerThreshold: number;       // Text length for worker offload
-  trackPerformance: boolean;     // Enable metrics tracking
-}
-
-interface SamplingConfig {
-  strategy: 'all' | 'throttled' | 'keyframes';
-  maxEventsPerSecond?: number;   // For 'throttled' strategy
-  keyframeInterval?: number;     // For 'keyframes' strategy (ms)
-}
-```
-
-**Preset Configurations:**
-
-```typescript
-import {
-  DEFAULT_OPTIMIZED_CONFIG,
-  HIGH_PERFORMANCE_CONFIG,
-  LOW_BANDWIDTH_CONFIG
-} from './hooks/useOptimizedRecorder';
-```
-
-#### `useHighPerformanceRecorder()`
-
-Pre-configured for smooth recording with throttled sampling (30 events/sec).
-
-#### `useLowBandwidthRecorder()`
-
-Pre-configured for reduced data volume with keyframe-only capture.
-
-### Utilities
-
-#### Redaction (`src/utils/redactor.ts`)
-
-```typescript
-// Simple redaction
-import { redactPII } from './utils/redactor';
-const safe = redactPII('Email: john@example.com'); // "Email: [EMAIL REDACTED]"
-
-// Configurable redaction
-import { redactWithConfig, type RedactionConfig } from './utils/redactor';
-const config: RedactionConfig = {
-  email: true,
-  phone: true,
-  ssn: true,
-  creditCard: true,
-};
-const safe = redactWithConfig(text, config);
-```
-
-#### PII Detection (`src/utils/piiDetector.ts`)
-
-```typescript
-import { detectPII, type PIIMatch } from './utils/piiDetector';
-
-const matches: PIIMatch[] = detectPII('Call me at 555-123-4567');
-// [{ type: 'phone', value: '555-123-4567', start: 11, end: 23, confidence: 'high' }]
-```
-
-#### Custom Patterns (`src/utils/customPatterns.ts`)
-
-```typescript
-import { registerPattern, setPatternEnabled } from './utils/customPatterns';
-
-// Register a custom pattern
-registerPattern({
-  name: 'employee-id',
-  pattern: /EMP-\d{6}/gi,
-  replacement: '[EMPLOYEE_ID]',
-  category: 'identifier',
-  priority: 10,
-  enabled: true,
-});
-
-// Toggle patterns
-setPatternEnabled('employee-id', false);
-```
-
-#### Performance Utilities (`src/utils/performanceUtils.ts`)
-
-```typescript
-import {
-  debounce,
-  throttle,
-  getPerformanceMetrics,
-  createEventSampler,
-} from './utils/performanceUtils';
-
-// Debounce with cancel/flush
-const debouncedFn = debounce(expensiveFn, 100);
-debouncedFn.cancel();
-debouncedFn.flush();
-
-// Get current metrics
-const metrics = getPerformanceMetrics();
-console.log(metrics.eventsPerSecond, metrics.avgRedactionTime);
-```
-
-### Components
-
-#### `PlayerModal`
-
-Modal wrapper for rrweb-player.
-
-```tsx
-<PlayerModal
-  isOpen={showPlayer}
-  onClose={() => setShowPlayer(false)}
-  events={recordedEvents}
-/>
-```
-
-#### `PerformanceMonitor`
-
-Real-time performance metrics display.
-
-```tsx
-<PerformanceMonitor
-  isRecording={isRecording}
-  updateInterval={1000}
-  position="bottom-right"
-  defaultExpanded={false}
-/>
-```
-
-#### `VirtualEventList`
-
-Virtualized list for displaying large numbers of events.
-
-```tsx
-<VirtualEventList
-  events={events}
-  rowHeight={40}
-  containerHeight={400}
-  onEventClick={(event, index) => console.log(event)}
-  onSeekTo={(timeOffset) => player.goto(timeOffset)}
-/>
-```
-
-## Configuration Options
-
-### Redaction Configuration
-
-```typescript
-interface RedactionConfig {
-  email?: boolean;      // Redact email addresses
-  phone?: boolean;      // Redact phone numbers
-  ssn?: boolean;        // Redact Social Security Numbers
-  creditCard?: boolean; // Redact credit card numbers
-}
-```
-
-### Block Selectors
-
-Completely exclude elements from recording:
-
-```typescript
-const config = {
-  blockSelectors: [
-    '.do-not-record',      // Class selector
-    '[data-private]',      // Attribute selector
-    '#secret-section',     // ID selector
-    'input[type="password"]', // Specific inputs
-  ],
-};
-```
-
-### Mask Text Selectors
-
-Always mask text content (regardless of PII detection):
-
-```typescript
-const config = {
-  maskTextSelectors: [
-    '.sensitive',
-    '.pii',
-    '[data-sensitive]',
-    '.user-data',
-  ],
-};
-```
-
-### Sampling Strategies
-
-**All Events** (default): Capture everything
-
-```typescript
-sampling: { strategy: 'all' }
-```
-
-**Throttled**: Limit events per second
-
-```typescript
-sampling: {
-  strategy: 'throttled',
-  maxEventsPerSecond: 30, // Max 30 events/sec
-}
-```
-
-**Keyframes**: Only capture snapshots at intervals
-
-```typescript
-sampling: {
-  strategy: 'keyframes',
-  keyframeInterval: 2000, // Every 2 seconds
-}
-```
-
-## Privacy Best Practices
-
-### 1. Defense in Depth
-
-Use multiple layers of protection:
-
-```typescript
-const config = {
-  // Layer 1: Block sensitive areas entirely
-  blockSelectors: ['[data-private]', '.payment-form'],
-
-  // Layer 2: Always mask certain elements
-  maskTextSelectors: ['.user-email', '.phone-display'],
-
-  // Layer 3: Automatic PII detection
-  redactionConfig: {
-    email: true,
-    phone: true,
-    ssn: true,
-    creditCard: true,
-  },
-
-  // Layer 4: Mask all input values
-  maskAllInputs: true,
-};
-```
-
-### 2. Mark Sensitive Elements
-
-Add data attributes to sensitive elements in your HTML:
-
-```html
-<!-- Completely excluded from recording -->
-<div data-private>
-  <p>This content will not be recorded</p>
-</div>
-
-<!-- Text will be masked -->
-<span data-sensitive>John Doe</span>
-```
-
-### 3. Audit Your Patterns
-
-Test redaction before production:
-
-```typescript
-import { redactPII } from './utils/redactor';
-
-// Test with sample data
-const testCases = [
-  'Email: user@company.com',
-  'SSN: 123-45-6789',
-  'Card: 4111-1111-1111-1111',
-];
-
-testCases.forEach(test => {
-  console.log('Input:', test);
-  console.log('Output:', redactPII(test));
-});
-```
-
-### 4. Limit Recording Scope
-
-Only record what you need:
-
-```typescript
-// Record only specific container
-const config = {
-  // Only record within this element
-  rootElement: document.getElementById('app-container'),
-};
-```
-
-## Compliance Patterns
-
-### HIPAA Compliance
-
-For healthcare applications:
-
-```typescript
-import { HIPAA_CONFIG } from './examples/AdvancedIntegration';
-
-// Includes:
-// - Medical record number patterns
-// - Date of birth detection
-// - Strict text masking
-// - All standard PII redaction
-```
-
-### PCI DSS Compliance
-
-For payment processing:
-
-```typescript
-import { PCI_DSS_CONFIG } from './examples/AdvancedIntegration';
-
-// Includes:
-// - Credit card number validation (Luhn algorithm)
-// - CVV masking
-// - Expiration date detection
-// - Cardholder name redaction
-```
-
-### GDPR Compliance
-
-For EU data protection:
-
-```typescript
-import { GDPR_CONFIG } from './examples/AdvancedIntegration';
-
-// Includes:
-// - EU phone number formats
-// - IBAN detection
-// - VAT number patterns
-// - Address redaction
-```
-
-### Custom Compliance Patterns
-
-Register your own patterns for specific requirements:
-
-```typescript
-import { registerPattern } from './utils/customPatterns';
-
-// Healthcare: Medical Record Numbers
-registerPattern({
-  name: 'mrn',
-  pattern: /MRN[:\s]*\d{7,10}/gi,
-  replacement: '[MRN REDACTED]',
-  category: 'medical',
-  priority: 20,
-});
-
-// Financial: Account Numbers
-registerPattern({
-  name: 'account-number',
-  pattern: /(?:account|acct)[:\s#]*\d{8,12}/gi,
-  replacement: '[ACCOUNT REDACTED]',
-  category: 'financial',
-  priority: 15,
-});
-```
-
-## Performance Tuning
-
-### High-Traffic Applications
-
-```typescript
-import { HIGH_PERFORMANCE_CONFIG } from './hooks/useOptimizedRecorder';
-
-// Or customize:
-const config = {
-  sampling: {
-    strategy: 'throttled',
-    maxEventsPerSecond: 30,
-  },
-  redactionDebounceMs: 100,
-  useWorkers: true,
-  workerThreshold: 500,
-};
-```
-
-### Mobile / Low-Bandwidth
-
-```typescript
-import { LOW_BANDWIDTH_CONFIG } from './hooks/useOptimizedRecorder';
-
-// Or customize:
-const config = {
-  sampling: {
-    strategy: 'keyframes',
-    keyframeInterval: 2000,
-  },
-  inlineStylesheet: false, // Reduce payload size
-};
-```
-
-### Monitor Performance
-
-```tsx
-import { PerformanceMonitor } from './components/PerformanceMonitor';
-
-function App() {
-  return (
-    <>
-      <YourApp />
-      {process.env.NODE_ENV === 'development' && (
-        <PerformanceMonitor isRecording={isRecording} />
-      )}
-    </>
-  );
-}
-```
-
-## Session Storage
-
-### Using Session Saver Hook
-
-```typescript
-import { useSessionSaver } from './hooks/useSessionSaver';
-
-const { saveSession, getSessions, deleteSession } = useSessionSaver({
-  storageKey: 'app-sessions',
-  maxSessions: 10,
-  compression: true,
-});
-
-// Save a session
-const sessionId = await saveSession(events, {
-  name: 'Bug Report',
-  tags: ['bug', 'checkout'],
-});
-
-// List sessions
-const sessions = getSessions();
-
-// Delete old sessions
-deleteSession(sessionId);
-```
-
-### Custom Storage Backend
-
-```typescript
-import { sessionStorage } from './utils/sessionStorage';
-
-// Save to your backend
-const compressed = sessionStorage.compress(events);
-await fetch('/api/sessions', {
-  method: 'POST',
-  body: JSON.stringify({ events: compressed }),
-});
-
-// Load from backend
-const response = await fetch(`/api/sessions/${id}`);
-const { events: compressed } = await response.json();
-const events = sessionStorage.decompress(compressed);
+// Add custom PII pattern
+await window.api.pii.addPattern(
+  'employee-id',
+  /EMP-\d{6}/gi,
+  '[EMPLOYEE_ID]',
+  'high'
+);
 ```
 
 ## Development
 
+### Commands
+
 ```bash
-# Install dependencies
-npm install
+# Install all dependencies
+pnpm install
 
-# Start development server
-npm run dev
+# Start desktop app development
+pnpm --filter @screencapture/desktop dev
 
-# Run tests
-npm test
+# Build desktop app
+pnpm --filter @screencapture/desktop build
+
+# Build extension
+pnpm --filter @screencapture/extension build
 
 # Run linter
-npm run lint
-
-# Build for production
-npm run build
+pnpm run lint
 ```
+
+### Building Distributables
+
+```bash
+# Build for current platform
+pnpm --filter @screencapture/desktop build:unpack
+
+# Build for specific platforms
+pnpm --filter @screencapture/desktop build:mac
+pnpm --filter @screencapture/desktop build:win
+pnpm --filter @screencapture/desktop build:linux
+```
+
+## Technology Stack
+
+- **Framework**: Electron + React 19
+- **Build**: Vite + electron-vite
+- **Database**: SQLite (better-sqlite3)
+- **Recording**: rrweb for DOM, native screen capture for video
+- **OCR**: Tesseract.js / Native TextDetector API
+- **Video**: FFmpeg for export and processing
+- **Language**: TypeScript (strict mode)
+
+## Security
+
+- Context isolation enabled
+- Node integration disabled
+- Sandboxed renderer process
+- IPC-based communication only
+- No external network calls for PII processing
 
 ## License
 
 MIT
+
+## Contributing
+
+Contributions are welcome! Please read our contributing guidelines before submitting PRs.
+
+## Support
+
+- [Report Issues](https://github.com/jimmyhosang/screencapture/issues)
+- [Documentation](https://github.com/jimmyhosang/screencapture/wiki)
