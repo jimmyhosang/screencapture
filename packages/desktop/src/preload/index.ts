@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { SessionRecord, SessionStats, AppSettings, VideoRecording, VideoRecordingStats, ExportOptions } from '../main/types';
+import type { OCRConfig, OCRResult, TextRegion } from '../main/ocr/types';
 
 // Expose protected methods that allow the renderer process to use
 // ipcRenderer without exposing the entire object
@@ -63,6 +64,30 @@ const api = {
     import: (): Promise<VideoRecording | null> => ipcRenderer.invoke('recordings:import'),
     getPath: (): Promise<string> => ipcRenderer.invoke('recordings:getPath'),
     openFolder: (): Promise<void> => ipcRenderer.invoke('recordings:openFolder')
+  },
+
+  // OCR operations for text detection
+  ocr: {
+    initialize: (): Promise<{ success: boolean; engine: string }> =>
+      ipcRenderer.invoke('ocr:initialize'),
+    processFrame: (imageData: string | ArrayBuffer, width: number, height: number): Promise<OCRResult> =>
+      ipcRenderer.invoke('ocr:processFrame', imageData, width, height),
+    processFile: (filePath: string): Promise<OCRResult | null> =>
+      ipcRenderer.invoke('ocr:processFile', filePath),
+    detectPII: (imageData: string | ArrayBuffer, width: number, height: number): Promise<{ region: TextRegion; piiTypes: string[] }[]> =>
+      ipcRenderer.invoke('ocr:detectPII', imageData, width, height),
+    selectTestImage: (): Promise<string | null> =>
+      ipcRenderer.invoke('ocr:selectTestImage'),
+    getConfig: (): Promise<OCRConfig> =>
+      ipcRenderer.invoke('ocr:getConfig'),
+    setConfig: (config: Partial<OCRConfig>): Promise<void> =>
+      ipcRenderer.invoke('ocr:setConfig', config),
+    getEngine: (): Promise<string> =>
+      ipcRenderer.invoke('ocr:getEngine'),
+    clearCache: (): Promise<void> =>
+      ipcRenderer.invoke('ocr:clearCache'),
+    terminate: (): Promise<void> =>
+      ipcRenderer.invoke('ocr:terminate')
   }
 };
 

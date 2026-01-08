@@ -3,6 +3,7 @@ import { join } from 'path';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import { initDatabase, getDatabase } from './database';
 import { setupRecordingHandlers } from './recordings';
+import { setupOCRHandlers } from './ocr';
 import type { SessionRecord, SessionStats, AppSettings } from './types';
 
 let mainWindow: BrowserWindow | null = null;
@@ -329,6 +330,7 @@ app.whenReady().then(() => {
   // Setup IPC handlers
   setupIpcHandlers();
   setupRecordingHandlers();
+  setupOCRHandlers();
 
   // Create window and tray
   createWindow();

@@ -4,6 +4,7 @@ import SessionList from './components/SessionList';
 import PlayerModal from './components/PlayerModal';
 import Settings from './components/Settings';
 import RecordingControls from './components/RecordingControls';
+import OCRTestMode from './components/OCRTestMode';
 
 type View = 'dashboard' | 'settings' | 'record';
 
@@ -35,6 +36,7 @@ function App(): JSX.Element {
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [playingSession, setPlayingSession] = useState<Session | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showOCRTest, setShowOCRTest] = useState(false);
 
   const loadSessions = useCallback(async () => {
     if (!window.api?.sessions?.getAll) {
@@ -163,6 +165,9 @@ function App(): JSX.Element {
           <button className="btn btn-primary" onClick={handleImport}>
             Import Session
           </button>
+          <button className="btn btn-secondary" onClick={() => setShowOCRTest(true)}>
+            OCR Test
+          </button>
         </div>
       </div>
 
@@ -208,6 +213,11 @@ function App(): JSX.Element {
           session={playingSession}
           onClose={() => setPlayingSession(null)}
         />
+      )}
+
+      {/* OCR Test mode modal */}
+      {showOCRTest && (
+        <OCRTestMode onClose={() => setShowOCRTest(false)} />
       )}
     </div>
   );
