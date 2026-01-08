@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import RedactionSettings from './RedactionSettings';
 
 interface AppSettings {
   theme: 'light' | 'dark' | 'system';
@@ -138,6 +139,8 @@ function Settings(): JSX.Element {
             />
           </div>
         </div>
+
+        <RedactionSettings />
 
         <div className="settings-section">
           <h3>About</h3>

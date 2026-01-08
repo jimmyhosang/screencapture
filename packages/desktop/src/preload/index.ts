@@ -1,7 +1,18 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { SessionRecord, SessionStats, AppSettings, VideoRecording, VideoRecordingStats, ExportOptions } from '../main/types';
-import type { OCRConfig, OCRResult, TextRegion } from '../main/ocr/types';
+import type { OCRConfig, OCRResult, TextRegion, TextBounds } from '../main/ocr/types';
 import type { PIIScanResult, PIIScannerConfig, PIIRegion } from '../main/ocr/piiScanner';
+import type {
+  RedactionConfig,
+  RedactionRegion,
+  RedactionStyle
+} from '../main/redaction/renderer';
+import type {
+  RedactionMask,
+  RedactionMaskRegion,
+  RedactionMode,
+  ApplyRedactionOptions
+} from '../main/redaction';
 
 // Expose protected methods that allow the renderer process to use
 // ipcRenderer without exposing the entire object
@@ -116,6 +127,77 @@ const api = {
       ipcRenderer.invoke('pii:removePattern', name),
     clearCache: (): Promise<void> =>
       ipcRenderer.invoke('pii:clearCache')
+  },
+
+  // Redaction operations (apply visual redactions to frames/videos)
+  redaction: {
+    // Configuration
+    getMode: (): Promise<RedactionMode> =>
+      ipcRenderer.invoke('redaction:getMode'),
+    setMode: (mode: Partial<RedactionMode>): Promise<void> =>
+      ipcRenderer.invoke('redaction:setMode', mode),
+    getConfig: (): Promise<RedactionConfig> =>
+      ipcRenderer.invoke('redaction:getConfig'),
+    setConfig: (config: Partial<RedactionConfig>): Promise<void> =>
+      ipcRenderer.invoke('redaction:setConfig', config),
+
+    // Real-time redaction (ImageData processing)
+    applyToFrame: (
+      imageData: Uint8ClampedArray,
+      width: number,
+      height: number,
+      regions: RedactionRegion[]
+    ): Promise<Uint8ClampedArray> =>
+      ipcRenderer.invoke('redaction:applyToFrame', imageData, width, height, regions),
+    applyFromPII: (
+      imageData: Uint8ClampedArray,
+      width: number,
+      height: number,
+      piiRegions: PIIRegion[]
+    ): Promise<Uint8ClampedArray> =>
+      ipcRenderer.invoke('redaction:applyFromPII', imageData, width, height, piiRegions),
+
+    // Redaction masks (post-process mode)
+    createMask: (
+      recordingId: string,
+      startTime: number,
+      endTime: number,
+      regions: RedactionMaskRegion[]
+    ): Promise<RedactionMask> =>
+      ipcRenderer.invoke('redaction:createMask', recordingId, startTime, endTime, regions),
+    createMaskFromPII: (
+      recordingId: string,
+      startTime: number,
+      endTime: number,
+      piiRegions: PIIRegion[]
+    ): Promise<RedactionMask> =>
+      ipcRenderer.invoke('redaction:createMaskFromPII', recordingId, startTime, endTime, piiRegions),
+    getMasks: (recordingId: string): Promise<RedactionMask[]> =>
+      ipcRenderer.invoke('redaction:getMasks', recordingId),
+    updateMask: (
+      recordingId: string,
+      maskId: string,
+      updates: Partial<Omit<RedactionMask, 'id' | 'recordingId' | 'createdAt'>>
+    ): Promise<boolean> =>
+      ipcRenderer.invoke('redaction:updateMask', recordingId, maskId, updates),
+    deleteMask: (recordingId: string, maskId: string): Promise<boolean> =>
+      ipcRenderer.invoke('redaction:deleteMask', recordingId, maskId),
+    clearMasks: (recordingId: string): Promise<void> =>
+      ipcRenderer.invoke('redaction:clearMasks', recordingId),
+
+    // Video processing
+    applyToVideo: (options: ApplyRedactionOptions): Promise<{ success: boolean; outputPath?: string; error?: string }> =>
+      ipcRenderer.invoke('redaction:applyToVideo', options),
+    previewFrame: (
+      videoPath: string,
+      timestamp: number,
+      masks: RedactionMask[]
+    ): Promise<{ success: boolean; imageData?: Uint8ClampedArray; width?: number; height?: number; error?: string }> =>
+      ipcRenderer.invoke('redaction:previewFrame', videoPath, timestamp, masks),
+
+    // Cleanup
+    terminate: (): Promise<void> =>
+      ipcRenderer.invoke('redaction:terminate')
   }
 };
 
