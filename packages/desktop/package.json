@@ -4,15 +4,37 @@
   "description": "Electron desktop app for screencapture - cross-platform session recording",
   "private": true,
   "type": "module",
+  "main": "./out/main/index.js",
   "scripts": {
-    "dev": "echo 'Desktop development not yet configured'",
-    "build": "echo 'Desktop build not yet configured'",
-    "lint": "echo 'Desktop lint not yet configured'"
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "postinstall": "electron-builder install-app-deps",
+    "build:unpack": "pnpm build && electron-builder --dir",
+    "build:win": "pnpm build && electron-builder --win",
+    "build:mac": "pnpm build && electron-builder --mac",
+    "build:linux": "pnpm build && electron-builder --linux",
+    "lint": "eslint . --ext .ts,.tsx"
   },
   "dependencies": {
-    "@screencapture/core": "workspace:*"
+    "@screencapture/core": "workspace:*",
+    "better-sqlite3": "^11.7.0",
+    "rrweb-player": "^2.0.0-alpha.4"
   },
   "devDependencies": {
-    "typescript": "~5.9.3"
+    "@electron-toolkit/preload": "^3.0.1",
+    "@electron-toolkit/utils": "^3.0.0",
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.15.2",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "@vitejs/plugin-react": "^4.5.0",
+    "electron": "^33.3.1",
+    "electron-builder": "^25.1.8",
+    "electron-vite": "^2.3.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "typescript": "~5.9.3",
+    "vite": "^5.4.0"
   }
 }
