@@ -6,6 +6,7 @@ import { setupRecordingHandlers } from './recordings';
 import { setupOCRHandlers } from './ocr';
 import { setupRedactionHandlers } from './redaction';
 import { setupPerformanceHandlers } from './performance';
+import { setupTaskHandlers } from './workers/taskManager';
 import type { SessionRecord, SessionStats, AppSettings } from './types';
 
 let mainWindow: BrowserWindow | null = null;
@@ -439,6 +440,7 @@ app.whenReady().then(() => {
   setupOCRHandlers();
   setupRedactionHandlers();
   setupPerformanceHandlers();
+  setupTaskHandlers();
   setupKeyboardShortcuts();
 
   // Create window and tray

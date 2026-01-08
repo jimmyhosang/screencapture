@@ -26,6 +26,12 @@ import type {
   PerformanceSnapshot,
   FrameMetrics
 } from '../main/performance';
+import type {
+  Task,
+  TaskType,
+  TaskOptions,
+  TaskStatus
+} from '../main/workers/taskManager';
 
 // Expose protected methods that allow the renderer process to use
 // ipcRenderer without exposing the entire object
@@ -351,6 +357,32 @@ const api = {
       ipcRenderer.removeAllListeners('shortcut:toggle-pause');
       ipcRenderer.removeAllListeners('shortcut:screenshot');
       ipcRenderer.removeAllListeners('shortcut:toggle-performance');
+    }
+  },
+
+  // Background task operations
+  tasks: {
+    getAll: (): Promise<Task[]> =>
+      ipcRenderer.invoke('tasks:getAll'),
+    get: (taskId: string): Promise<Task | null> =>
+      ipcRenderer.invoke('tasks:get', taskId),
+    cancel: (taskId: string): Promise<boolean> =>
+      ipcRenderer.invoke('tasks:cancel', taskId),
+    clearCompleted: (): Promise<number> =>
+      ipcRenderer.invoke('tasks:clearCompleted'),
+    create: (type: TaskType, data: Record<string, unknown>, options?: TaskOptions): Promise<string> =>
+      ipcRenderer.invoke('tasks:create', type, data, options),
+    onUpdate: (callback: (update: { taskId: string; type: TaskType; status: TaskStatus; progress: number; message: string; result?: unknown; error?: string }) => void): void => {
+      ipcRenderer.on('tasks:update', (_, update) => callback(update));
+    },
+    onListUpdate: (callback: (tasks: Task[]) => void): void => {
+      ipcRenderer.on('tasks:listUpdate', (_, tasks) => callback(tasks));
+    },
+    removeUpdateListener: (): void => {
+      ipcRenderer.removeAllListeners('tasks:update');
+    },
+    removeListUpdateListener: (): void => {
+      ipcRenderer.removeAllListeners('tasks:listUpdate');
     }
   }
 };
