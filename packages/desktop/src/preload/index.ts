@@ -34,6 +34,18 @@ const api = {
     importSessionFile: (callback: (filePath: string) => void): void => {
       ipcRenderer.on('import-session-file', (_, filePath) => callback(filePath));
     }
+  },
+
+  // Recording operations
+  recording: {
+    getSources: (): Promise<Array<{ id: string; name: string; type: string; thumbnailDataUrl?: string }>> =>
+      ipcRenderer.invoke('recording:getSources'),
+    startUrl: (url: string, config: Record<string, unknown>): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke('recording:startUrl', url, config),
+    stop: (): Promise<{ success: boolean; events?: unknown[]; duration?: number; error?: string }> =>
+      ipcRenderer.invoke('recording:stop'),
+    isActive: (): Promise<boolean> =>
+      ipcRenderer.invoke('recording:isActive')
   }
 };
 

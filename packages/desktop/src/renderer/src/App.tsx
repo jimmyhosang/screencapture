@@ -3,8 +3,9 @@ import Dashboard from './components/Dashboard';
 import SessionList from './components/SessionList';
 import PlayerModal from './components/PlayerModal';
 import Settings from './components/Settings';
+import RecordingControls from './components/RecordingControls';
 
-type View = 'dashboard' | 'settings';
+type View = 'dashboard' | 'settings' | 'record';
 
 interface Session {
   id: string;
@@ -36,11 +37,19 @@ function App(): JSX.Element {
   const [searchQuery, setSearchQuery] = useState('');
 
   const loadSessions = useCallback(async () => {
+    if (!window.api?.sessions?.getAll) {
+      console.error('window.api.sessions.getAll is not available');
+      return;
+    }
     const allSessions = await window.api.sessions.getAll();
     setSessions(allSessions);
   }, []);
 
   const loadStats = useCallback(async () => {
+    if (!window.api?.sessions?.stats) {
+      console.error('window.api.sessions.stats is not available');
+      return;
+    }
     const sessionStats = await window.api.sessions.stats();
     setStats(sessionStats);
   }, []);
@@ -50,13 +59,15 @@ function App(): JSX.Element {
     loadStats();
 
     // Listen for import events from tray
-    window.api.on.importSessionFile(async (filePath: string) => {
-      const imported = await window.api.sessions.import(filePath);
-      if (imported) {
-        loadSessions();
-        loadStats();
-      }
-    });
+    if (window.api?.on?.importSessionFile) {
+      window.api.on.importSessionFile(async (filePath: string) => {
+        const imported = await window.api.sessions.import(filePath);
+        if (imported) {
+          loadSessions();
+          loadStats();
+        }
+      });
+    }
   }, [loadSessions, loadStats]);
 
   const handleImport = async () => {
@@ -115,6 +126,12 @@ function App(): JSX.Element {
             Dashboard
           </button>
           <button
+            className={`nav-tab ${view === 'record' ? 'active' : ''}`}
+            onClick={() => setView('record')}
+          >
+            Record
+          </button>
+          <button
             className={`nav-tab ${view === 'settings' ? 'active' : ''}`}
             onClick={() => setView('settings')}
           >
@@ -151,15 +168,38 @@ function App(): JSX.Element {
 
       {/* Main content */}
       <div className="main-content">
-        {view === 'dashboard' ? (
+        {view === 'dashboard' && (
           <Dashboard
             stats={stats}
             selectedSession={selectedSession}
             onPlay={handlePlay}
           />
-        ) : (
-          <Settings />
         )}
+        {view === 'record' && (
+          <RecordingControls
+            onRecordingComplete={async (events, duration, privacyConfig) => {
+              // Save the recording as a new session
+              const session = {
+                id: crypto.randomUUID(),
+                name: `Recording ${new Date().toLocaleString()}`,
+                timestamp: Date.now(),
+                duration,
+                eventCount: events.length,
+                events,
+                privacyConfig: {
+                  maskInputs: privacyConfig.maskAllInputs,
+                  blockSensitive: privacyConfig.blockSensitive,
+                  maskPiiPatterns: privacyConfig.maskPiiPatterns
+                }
+              };
+              await window.api.sessions.save(session);
+              loadSessions();
+              loadStats();
+              setView('dashboard');
+            }}
+          />
+        )}
+        {view === 'settings' && <Settings />}
       </div>
 
       {/* Player modal */}

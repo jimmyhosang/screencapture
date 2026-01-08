@@ -2,6 +2,7 @@ import { app, shell, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage } f
 import { join } from 'path';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import { initDatabase, getDatabase } from './database';
+import { setupRecordingHandlers } from './recorder';
 import type { SessionRecord, SessionStats, AppSettings } from './types';
 
 let mainWindow: BrowserWindow | null = null;
@@ -16,7 +17,7 @@ function createWindow(): void {
     show: false,
     autoHideMenuBar: true,
     webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
+      preload: join(__dirname, '../preload/index.mjs'),
       sandbox: false,
       contextIsolation: true,
       nodeIntegration: false
@@ -326,6 +327,7 @@ app.whenReady().then(() => {
 
   // Setup IPC handlers
   setupIpcHandlers();
+  setupRecordingHandlers();
 
   // Create window and tray
   createWindow();
