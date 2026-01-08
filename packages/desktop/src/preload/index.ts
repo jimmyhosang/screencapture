@@ -13,6 +13,14 @@ import type {
   RedactionMode,
   ApplyRedactionOptions
 } from '../main/redaction';
+import type {
+  ManualRegion,
+  AppBlockRule,
+  RedactionProfile,
+  RedactionSession,
+  TimelineEvent,
+  DetectedWindow,
+} from '../main/redaction/types';
 
 // Expose protected methods that allow the renderer process to use
 // ipcRenderer without exposing the entire object
@@ -198,6 +206,93 @@ const api = {
     // Cleanup
     terminate: (): Promise<void> =>
       ipcRenderer.invoke('redaction:terminate')
+  },
+
+  // Manual redaction operations (region marking, app blocking, profiles)
+  manual: {
+    // Sessions
+    createSession: (
+      recordingId: string,
+      duration: number,
+      dimensions: { width: number; height: number }
+    ): Promise<RedactionSession> =>
+      ipcRenderer.invoke('manual:createSession', recordingId, duration, dimensions),
+    getSession: (recordingId: string): Promise<RedactionSession | null> =>
+      ipcRenderer.invoke('manual:getSession', recordingId),
+    saveSession: (recordingId: string): Promise<boolean> =>
+      ipcRenderer.invoke('manual:saveSession', recordingId),
+    deleteSession: (recordingId: string): Promise<boolean> =>
+      ipcRenderer.invoke('manual:deleteSession', recordingId),
+
+    // Regions
+    addRegion: (
+      recordingId: string,
+      region: Omit<ManualRegion, 'id' | 'createdAt'>
+    ): Promise<ManualRegion | null> =>
+      ipcRenderer.invoke('manual:addRegion', recordingId, region),
+    updateRegion: (
+      recordingId: string,
+      regionId: string,
+      updates: Partial<ManualRegion>
+    ): Promise<boolean> =>
+      ipcRenderer.invoke('manual:updateRegion', recordingId, regionId, updates),
+    deleteRegion: (recordingId: string, regionId: string): Promise<boolean> =>
+      ipcRenderer.invoke('manual:deleteRegion', recordingId, regionId),
+    getRegionsAtTime: (recordingId: string, time: number): Promise<ManualRegion[]> =>
+      ipcRenderer.invoke('manual:getRegionsAtTime', recordingId, time),
+
+    // App Block Rules
+    getAppBlockRules: (): Promise<AppBlockRule[]> =>
+      ipcRenderer.invoke('manual:getAppBlockRules'),
+    addAppBlockRule: (rule: Omit<AppBlockRule, 'id' | 'createdAt'>): Promise<AppBlockRule> =>
+      ipcRenderer.invoke('manual:addAppBlockRule', rule),
+    updateAppBlockRule: (id: string, updates: Partial<AppBlockRule>): Promise<boolean> =>
+      ipcRenderer.invoke('manual:updateAppBlockRule', id, updates),
+    deleteAppBlockRule: (id: string): Promise<boolean> =>
+      ipcRenderer.invoke('manual:deleteAppBlockRule', id),
+    matchWindowToRules: (window: DetectedWindow): Promise<AppBlockRule | null> =>
+      ipcRenderer.invoke('manual:matchWindowToRules', window),
+
+    // Timeline
+    addTimelineEvent: (
+      recordingId: string,
+      trackId: string,
+      event: Omit<TimelineEvent, 'id'>
+    ): Promise<TimelineEvent | null> =>
+      ipcRenderer.invoke('manual:addTimelineEvent', recordingId, trackId, event),
+    updateTimelineEvent: (
+      recordingId: string,
+      trackId: string,
+      eventId: string,
+      updates: Partial<TimelineEvent>
+    ): Promise<boolean> =>
+      ipcRenderer.invoke('manual:updateTimelineEvent', recordingId, trackId, eventId, updates),
+    deleteTimelineEvent: (
+      recordingId: string,
+      trackId: string,
+      eventId: string
+    ): Promise<boolean> =>
+      ipcRenderer.invoke('manual:deleteTimelineEvent', recordingId, trackId, eventId),
+
+    // Profiles
+    getProfiles: (): Promise<RedactionProfile[]> =>
+      ipcRenderer.invoke('manual:getProfiles'),
+    getProfile: (id: string): Promise<RedactionProfile | null> =>
+      ipcRenderer.invoke('manual:getProfile', id),
+    createProfile: (
+      profile: Omit<RedactionProfile, 'id' | 'version' | 'createdAt' | 'updatedAt'>
+    ): Promise<RedactionProfile> =>
+      ipcRenderer.invoke('manual:createProfile', profile),
+    updateProfile: (id: string, updates: Partial<RedactionProfile>): Promise<boolean> =>
+      ipcRenderer.invoke('manual:updateProfile', id, updates),
+    deleteProfile: (id: string): Promise<boolean> =>
+      ipcRenderer.invoke('manual:deleteProfile', id),
+    exportProfile: (id: string): Promise<boolean> =>
+      ipcRenderer.invoke('manual:exportProfile', id),
+    importProfile: (): Promise<RedactionProfile | null> =>
+      ipcRenderer.invoke('manual:importProfile'),
+    applyProfile: (recordingId: string, profileId: string): Promise<boolean> =>
+      ipcRenderer.invoke('manual:applyProfile', recordingId, profileId)
   }
 };
 

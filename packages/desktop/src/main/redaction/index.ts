@@ -6,7 +6,7 @@
  * - Post-process: Apply redactions to recorded videos using FFmpeg
  */
 
-import { ipcMain } from 'electron';
+import { ipcMain, dialog } from 'electron';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import ffmpeg from 'fluent-ffmpeg';
@@ -16,6 +16,15 @@ import type { RedactionConfig, RedactionRegion, RedactionStyle } from './rendere
 import type { PIIRegion } from '../ocr/piiScanner';
 import type { TextBounds } from '../ocr/types';
 import { getRecordingsPath, getThumbnailsPath } from '../database';
+import { getManualRedactionManager, terminateManualRedactionManager } from './manualRedaction';
+import type {
+  ManualRegion,
+  AppBlockRule,
+  RedactionProfile,
+  RedactionSession,
+  TimelineEvent,
+  DetectedWindow,
+} from './types';
 
 // Set ffmpeg path
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
@@ -510,6 +519,253 @@ export function setupRedactionHandlers(): void {
   });
 
   // -------------------------------------------------------------------------
+  // Manual Redaction - Sessions
+  // -------------------------------------------------------------------------
+
+  const manualManager = getManualRedactionManager();
+
+  /**
+   * Create a new redaction session for a recording
+   */
+  ipcMain.handle('manual:createSession', (
+    _,
+    recordingId: string,
+    duration: number,
+    dimensions: { width: number; height: number }
+  ): RedactionSession => {
+    return manualManager.createSession(recordingId, duration, dimensions);
+  });
+
+  /**
+   * Get or load a redaction session
+   */
+  ipcMain.handle('manual:getSession', (_, recordingId: string): RedactionSession | null => {
+    return manualManager.loadSession(recordingId);
+  });
+
+  /**
+   * Save a redaction session
+   */
+  ipcMain.handle('manual:saveSession', (_, recordingId: string): boolean => {
+    return manualManager.saveSession(recordingId);
+  });
+
+  /**
+   * Delete a redaction session
+   */
+  ipcMain.handle('manual:deleteSession', (_, recordingId: string): boolean => {
+    return manualManager.deleteSession(recordingId);
+  });
+
+  // -------------------------------------------------------------------------
+  // Manual Redaction - Regions
+  // -------------------------------------------------------------------------
+
+  /**
+   * Add a manual redaction region
+   */
+  ipcMain.handle('manual:addRegion', (
+    _,
+    recordingId: string,
+    region: Omit<ManualRegion, 'id' | 'createdAt'>
+  ): ManualRegion | null => {
+    return manualManager.addRegion(recordingId, region);
+  });
+
+  /**
+   * Update a manual redaction region
+   */
+  ipcMain.handle('manual:updateRegion', (
+    _,
+    recordingId: string,
+    regionId: string,
+    updates: Partial<ManualRegion>
+  ): boolean => {
+    return manualManager.updateRegion(recordingId, regionId, updates);
+  });
+
+  /**
+   * Delete a manual redaction region
+   */
+  ipcMain.handle('manual:deleteRegion', (_, recordingId: string, regionId: string): boolean => {
+    return manualManager.deleteRegion(recordingId, regionId);
+  });
+
+  /**
+   * Get regions active at a specific time
+   */
+  ipcMain.handle('manual:getRegionsAtTime', (_, recordingId: string, time: number): ManualRegion[] => {
+    return manualManager.getRegionsAtTime(recordingId, time);
+  });
+
+  // -------------------------------------------------------------------------
+  // Manual Redaction - App Block Rules
+  // -------------------------------------------------------------------------
+
+  /**
+   * Get all app blocking rules
+   */
+  ipcMain.handle('manual:getAppBlockRules', (): AppBlockRule[] => {
+    return manualManager.getAppBlockRules();
+  });
+
+  /**
+   * Add an app blocking rule
+   */
+  ipcMain.handle('manual:addAppBlockRule', (
+    _,
+    rule: Omit<AppBlockRule, 'id' | 'createdAt'>
+  ): AppBlockRule => {
+    return manualManager.addAppBlockRule(rule);
+  });
+
+  /**
+   * Update an app blocking rule
+   */
+  ipcMain.handle('manual:updateAppBlockRule', (
+    _,
+    id: string,
+    updates: Partial<AppBlockRule>
+  ): boolean => {
+    return manualManager.updateAppBlockRule(id, updates);
+  });
+
+  /**
+   * Delete an app blocking rule
+   */
+  ipcMain.handle('manual:deleteAppBlockRule', (_, id: string): boolean => {
+    return manualManager.deleteAppBlockRule(id);
+  });
+
+  /**
+   * Check if a window matches any blocking rule
+   */
+  ipcMain.handle('manual:matchWindowToRules', (_, window: DetectedWindow): AppBlockRule | null => {
+    return manualManager.matchWindowToRules(window);
+  });
+
+  // -------------------------------------------------------------------------
+  // Manual Redaction - Timeline
+  // -------------------------------------------------------------------------
+
+  /**
+   * Add a timeline event
+   */
+  ipcMain.handle('manual:addTimelineEvent', (
+    _,
+    recordingId: string,
+    trackId: string,
+    event: Omit<TimelineEvent, 'id'>
+  ): TimelineEvent | null => {
+    return manualManager.addTimelineEvent(recordingId, trackId, event);
+  });
+
+  /**
+   * Update a timeline event
+   */
+  ipcMain.handle('manual:updateTimelineEvent', (
+    _,
+    recordingId: string,
+    trackId: string,
+    eventId: string,
+    updates: Partial<TimelineEvent>
+  ): boolean => {
+    return manualManager.updateTimelineEvent(recordingId, trackId, eventId, updates);
+  });
+
+  /**
+   * Delete a timeline event
+   */
+  ipcMain.handle('manual:deleteTimelineEvent', (
+    _,
+    recordingId: string,
+    trackId: string,
+    eventId: string
+  ): boolean => {
+    return manualManager.deleteTimelineEvent(recordingId, trackId, eventId);
+  });
+
+  // -------------------------------------------------------------------------
+  // Manual Redaction - Profiles
+  // -------------------------------------------------------------------------
+
+  /**
+   * Get all saved profiles
+   */
+  ipcMain.handle('manual:getProfiles', (): RedactionProfile[] => {
+    return manualManager.getProfiles();
+  });
+
+  /**
+   * Get a specific profile
+   */
+  ipcMain.handle('manual:getProfile', (_, id: string): RedactionProfile | null => {
+    return manualManager.getProfile(id);
+  });
+
+  /**
+   * Create a new profile
+   */
+  ipcMain.handle('manual:createProfile', (
+    _,
+    profile: Omit<RedactionProfile, 'id' | 'version' | 'createdAt' | 'updatedAt'>
+  ): RedactionProfile => {
+    return manualManager.createProfile(profile);
+  });
+
+  /**
+   * Update a profile
+   */
+  ipcMain.handle('manual:updateProfile', (_, id: string, updates: Partial<RedactionProfile>): boolean => {
+    return manualManager.updateProfile(id, updates);
+  });
+
+  /**
+   * Delete a profile
+   */
+  ipcMain.handle('manual:deleteProfile', (_, id: string): boolean => {
+    return manualManager.deleteProfile(id);
+  });
+
+  /**
+   * Export a profile to file
+   */
+  ipcMain.handle('manual:exportProfile', async (_, id: string): Promise<boolean> => {
+    const profile = manualManager.getProfile(id);
+    if (!profile) return false;
+
+    const result = await dialog.showSaveDialog({
+      defaultPath: `${profile.name.replace(/\s+/g, '-')}.json`,
+      filters: [{ name: 'Redaction Profile', extensions: ['json'] }],
+    });
+
+    if (result.canceled || !result.filePath) return false;
+
+    return manualManager.exportProfile(id, result.filePath);
+  });
+
+  /**
+   * Import a profile from file
+   */
+  ipcMain.handle('manual:importProfile', async (): Promise<RedactionProfile | null> => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openFile'],
+      filters: [{ name: 'Redaction Profile', extensions: ['json'] }],
+    });
+
+    if (result.canceled || !result.filePaths.length) return null;
+
+    return manualManager.importProfile(result.filePaths[0]);
+  });
+
+  /**
+   * Apply a profile to a session
+   */
+  ipcMain.handle('manual:applyProfile', (_, recordingId: string, profileId: string): boolean => {
+    return manualManager.applyProfile(recordingId, profileId);
+  });
+
+  // -------------------------------------------------------------------------
   // Cleanup
   // -------------------------------------------------------------------------
 
@@ -518,6 +774,7 @@ export function setupRedactionHandlers(): void {
    */
   ipcMain.handle('redaction:terminate', (): void => {
     terminateRedactionRenderer();
+    terminateManualRedactionManager();
     redactionMasks.clear();
   });
 }
