@@ -1314,3 +1314,131 @@ body {
   border-color: #ef4444;
   background: rgba(239, 68, 68, 0.2);
 }
+
+/* Enhanced PII Visualization Styles */
+.ocr-display-options {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border-radius: 8px;
+}
+
+.ocr-display-options .toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.pii-summary {
+  background: var(--bg-card);
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.pii-summary h4 {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.pii-type-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pii-type-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  border-left: 3px solid;
+  font-size: 0.75rem;
+}
+
+.pii-type-icon {
+  font-size: 0.875rem;
+}
+
+.pii-type-name {
+  font-weight: 500;
+}
+
+.pii-type-count {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.pii-selected {
+  border-left: 4px solid;
+}
+
+.pii-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.matched-text {
+  font-family: monospace;
+  background: rgba(239, 68, 68, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.redacted-text {
+  font-family: monospace;
+  background: rgba(34, 197, 94, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #22c55e;
+}
+
+.region-item.pii {
+  border-left: 3px solid;
+  padding-left: 9px;
+}
+
+.region-item .pii-icon {
+  font-size: 1rem;
+}
+
+.no-pii-message {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.legend-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.confidence.high {
+  color: #22c55e;
+}
+
+.confidence.medium {
+  color: #eab308;
+}
+
+.confidence.low {
+  color: #6b7280;
+}

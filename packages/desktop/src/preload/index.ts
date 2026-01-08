@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { SessionRecord, SessionStats, AppSettings, VideoRecording, VideoRecordingStats, ExportOptions } from '../main/types';
 import type { OCRConfig, OCRResult, TextRegion } from '../main/ocr/types';
+import type { PIIScanResult, PIIScannerConfig, PIIRegion } from '../main/ocr/piiScanner';
 
 // Expose protected methods that allow the renderer process to use
 // ipcRenderer without exposing the entire object
@@ -88,6 +89,33 @@ const api = {
       ipcRenderer.invoke('ocr:clearCache'),
     terminate: (): Promise<void> =>
       ipcRenderer.invoke('ocr:terminate')
+  },
+
+  // PII Scanner operations (enhanced PII detection on OCR results)
+  pii: {
+    scanRegions: (textRegions: TextRegion[], frameHash?: string): Promise<PIIScanResult> =>
+      ipcRenderer.invoke('pii:scanRegions', textRegions, frameHash),
+    scanImage: (imageData: string | ArrayBuffer, width: number, height: number): Promise<{ ocrResult: OCRResult; piiResult: PIIScanResult }> =>
+      ipcRenderer.invoke('pii:scanImage', imageData, width, height),
+    getColors: (): Promise<Record<string, string>> =>
+      ipcRenderer.invoke('pii:getColors'),
+    calculateMatchBounds: (
+      regionBounds: { x: number; y: number; width: number; height: number },
+      regionText: string,
+      matchStart: number,
+      matchEnd: number
+    ): Promise<{ x: number; y: number; width: number; height: number }> =>
+      ipcRenderer.invoke('pii:calculateMatchBounds', regionBounds, regionText, matchStart, matchEnd),
+    getConfig: (): Promise<PIIScannerConfig> =>
+      ipcRenderer.invoke('pii:getConfig'),
+    setConfig: (config: Partial<PIIScannerConfig>): Promise<void> =>
+      ipcRenderer.invoke('pii:setConfig', config),
+    addPattern: (name: string, regex: string, replacer: string, confidence?: 'high' | 'medium' | 'low'): Promise<boolean> =>
+      ipcRenderer.invoke('pii:addPattern', name, regex, replacer, confidence),
+    removePattern: (name: string): Promise<boolean> =>
+      ipcRenderer.invoke('pii:removePattern', name),
+    clearCache: (): Promise<void> =>
+      ipcRenderer.invoke('pii:clearCache')
   }
 };
 

@@ -2,10 +2,13 @@ import { ipcMain, dialog } from 'electron';
 import { readFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import { getTextDetector, terminateTextDetector } from './textDetector';
+import { getPIIScanner, terminatePIIScanner, PII_COLORS, computeTextHash, calculateMatchBounds } from './piiScanner';
 import type { OCRConfig, OCRResult, TextRegion } from './types';
+import type { PIIScanResult, PIIScannerConfig, PIIRegion } from './piiScanner';
 
 export function setupOCRHandlers(): void {
   const detector = getTextDetector();
+  const piiScanner = getPIIScanner();
 
   // Initialize OCR engine
   ipcMain.handle('ocr:initialize', async (): Promise<{ success: boolean; engine: string }> => {
@@ -123,5 +126,111 @@ export function setupOCRHandlers(): void {
   // Terminate OCR (cleanup)
   ipcMain.handle('ocr:terminate', async (): Promise<void> => {
     await terminateTextDetector();
+    terminatePIIScanner();
+  });
+
+  // =========================================================================
+  // PII Scanner Handlers
+  // =========================================================================
+
+  // Scan text regions for PII with detailed results
+  ipcMain.handle('pii:scanRegions', (
+    _,
+    textRegions: TextRegion[],
+    frameHash?: string
+  ): PIIScanResult => {
+    return piiScanner.scanFrame(textRegions, frameHash);
+  });
+
+  // Scan image for PII (OCR + PII detection combined)
+  ipcMain.handle('pii:scanImage', async (
+    _,
+    imageData: string | ArrayBuffer,
+    width: number,
+    height: number
+  ): Promise<{ ocrResult: OCRResult; piiResult: PIIScanResult }> => {
+    try {
+      let buffer: Buffer;
+      if (typeof imageData === 'string') {
+        buffer = Buffer.from(imageData, 'base64');
+      } else {
+        buffer = Buffer.from(imageData);
+      }
+
+      // Run OCR
+      const ocrResult = await detector.processFrame(buffer, width, height);
+
+      // Compute text hash for change detection
+      const frameHash = computeTextHash(ocrResult.regions);
+
+      // Scan for PII
+      const piiResult = piiScanner.scanFrame(ocrResult.regions, frameHash);
+
+      return { ocrResult, piiResult };
+    } catch (error) {
+      console.error('[PII] Scan image error:', error);
+      return {
+        ocrResult: {
+          regions: [],
+          processingTimeMs: 0,
+          engine: detector.getEngine() as 'vision' | 'tesseract',
+          frameWidth: width,
+          frameHeight: height
+        },
+        piiResult: {
+          regions: [],
+          summary: {},
+          processingTimeMs: 0,
+          regionsScanned: 0
+        }
+      };
+    }
+  });
+
+  // Get PII colors mapping
+  ipcMain.handle('pii:getColors', (): Record<string, string> => {
+    return { ...PII_COLORS };
+  });
+
+  // Calculate precise bounds for a PII match
+  ipcMain.handle('pii:calculateMatchBounds', (
+    _,
+    regionBounds: { x: number; y: number; width: number; height: number },
+    regionText: string,
+    matchStart: number,
+    matchEnd: number
+  ): { x: number; y: number; width: number; height: number } => {
+    return calculateMatchBounds(regionBounds, regionText, matchStart, matchEnd);
+  });
+
+  // Get PII scanner config
+  ipcMain.handle('pii:getConfig', (): PIIScannerConfig => {
+    return piiScanner.getConfig();
+  });
+
+  // Set PII scanner config
+  ipcMain.handle('pii:setConfig', (_, config: Partial<PIIScannerConfig>): void => {
+    piiScanner.setConfig(config);
+  });
+
+  // Add custom pattern
+  ipcMain.handle('pii:addPattern', (
+    _,
+    name: string,
+    regex: string,
+    replacer: string,
+    confidence?: 'high' | 'medium' | 'low'
+  ): boolean => {
+    return piiScanner.addPattern(name, regex, replacer, confidence || 'medium');
+  });
+
+  // Remove custom pattern
+  ipcMain.handle('pii:removePattern', (_, name: string): boolean => {
+    return piiScanner.removePattern(name);
+  });
+
+  // Clear PII scanner cache
+  ipcMain.handle('pii:clearCache', (): void => {
+    piiScanner.clearCache();
   });
 }

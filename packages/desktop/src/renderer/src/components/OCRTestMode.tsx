@@ -22,39 +22,79 @@ interface OCRResult {
 }
 
 interface PIIRegion {
-  region: TextRegion;
-  piiTypes: string[];
+  type: string;
+  bounds: TextBounds;
+  confidence: 'high' | 'medium' | 'low';
+  originalText: string;
+  matchedText: string;
+  redactedText: string;
+  color: string;
+  matchStart: number;
+  matchEnd: number;
+}
+
+interface PIIScanResult {
+  regions: PIIRegion[];
+  summary: Record<string, number>;
+  processingTimeMs: number;
+  regionsScanned: number;
 }
 
 interface OCRTestModeProps {
   onClose: () => void;
 }
 
+// PII type display names and descriptions
+const PII_TYPE_INFO: Record<string, { name: string; icon: string; description: string }> = {
+  ssn: { name: 'SSN', icon: '🔴', description: 'Social Security Number' },
+  creditCard: { name: 'Credit Card', icon: '💳', description: 'Credit/Debit Card Number' },
+  bankAccount: { name: 'Bank Account', icon: '🏦', description: 'Bank Account Number' },
+  iban: { name: 'IBAN', icon: '🌍', description: 'International Bank Account' },
+  email: { name: 'Email', icon: '📧', description: 'Email Address' },
+  phone: { name: 'Phone', icon: '📱', description: 'Phone Number' },
+  ipv4: { name: 'IPv4', icon: '🌐', description: 'IP Address (v4)' },
+  ipv6: { name: 'IPv6', icon: '🌐', description: 'IP Address (v6)' },
+  apiKey: { name: 'API Key', icon: '🔑', description: 'API Key/Token' },
+  passport: { name: 'Passport', icon: '🛂', description: 'Passport Number' },
+  driverLicense: { name: 'License', icon: '🪪', description: "Driver's License" },
+  dateOfBirth: { name: 'DOB', icon: '🎂', description: 'Date of Birth' },
+  name: { name: 'Name', icon: '👤', description: 'Personal Name' },
+  currency: { name: 'Currency', icon: '💰', description: 'Currency Amount' },
+};
+
 function OCRTestMode({ onClose }: OCRTestModeProps): JSX.Element {
   const [imagePath, setImagePath] = useState<string | null>(null);
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
   const [ocrResult, setOcrResult] = useState<OCRResult | null>(null);
-  const [piiRegions, setPiiRegions] = useState<PIIRegion[]>([]);
+  const [piiResult, setPiiResult] = useState<PIIScanResult | null>(null);
+  const [piiColors, setPiiColors] = useState<Record<string, string>>({});
   const [isProcessing, setIsProcessing] = useState(false);
   const [engine, setEngine] = useState<string>('initializing...');
   const [selectedRegion, setSelectedRegion] = useState<TextRegion | null>(null);
-  const [showPIIOnly, setShowPIIOnly] = useState(false);
+  const [selectedPII, setSelectedPII] = useState<PIIRegion | null>(null);
+  const [showOCRBoxes, setShowOCRBoxes] = useState(true);
+  const [showPIIBoxes, setShowPIIBoxes] = useState(true);
+  const [showPreciseBounds, setShowPreciseBounds] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
 
-  // Initialize OCR engine on mount
+  // Initialize OCR engine and get PII colors
   useEffect(() => {
-    const initOCR = async () => {
+    const init = async () => {
       try {
         const result = await window.api.ocr.initialize();
         setEngine(result.engine);
+
+        // Get PII colors
+        const colors = await window.api.pii.getColors();
+        setPiiColors(colors);
       } catch (err) {
-        console.error('Failed to initialize OCR:', err);
+        console.error('Failed to initialize:', err);
         setEngine('failed');
       }
     };
-    initOCR();
+    init();
 
     return () => {
       window.api.ocr.terminate();
@@ -87,8 +127,9 @@ function OCRTestMode({ onClose }: OCRTestModeProps): JSX.Element {
       if (filePath) {
         setImagePath(filePath);
         setOcrResult(null);
-        setPiiRegions([]);
+        setPiiResult(null);
         setSelectedRegion(null);
+        setSelectedPII(null);
         setError(null);
 
         // Read file and convert to data URL
@@ -107,33 +148,28 @@ function OCRTestMode({ onClose }: OCRTestModeProps): JSX.Element {
     }
   };
 
-  // Process image with OCR
+  // Process image with OCR + PII detection
   const handleProcessOCR = async () => {
     if (!imageDataUrl || !imageRef.current) return;
 
     setIsProcessing(true);
     setError(null);
     setSelectedRegion(null);
+    setSelectedPII(null);
 
     try {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-
       // Get image data as base64
       const base64Data = imageDataUrl.split(',')[1];
       const width = imageRef.current.width;
       const height = imageRef.current.height;
 
-      // Run OCR
-      const result = await window.api.ocr.processFrame(base64Data, width, height);
-      setOcrResult(result);
+      // Use combined OCR + PII scan
+      const { ocrResult: ocr, piiResult: pii } = await window.api.pii.scanImage(base64Data, width, height);
+      setOcrResult(ocr);
+      setPiiResult(pii);
 
-      // Also detect PII
-      const pii = await window.api.ocr.detectPII(base64Data, width, height);
-      setPiiRegions(pii);
-
-      // Draw results on canvas
-      drawResults(result, pii);
+      // Draw results
+      drawResults(ocr, pii);
     } catch (err) {
       console.error('OCR processing failed:', err);
       setError('OCR processing failed');
@@ -142,8 +178,8 @@ function OCRTestMode({ onClose }: OCRTestModeProps): JSX.Element {
     }
   };
 
-  // Draw OCR results on canvas
-  const drawResults = useCallback((result: OCRResult, pii: PIIRegion[]) => {
+  // Draw OCR and PII results on canvas
+  const drawResults = useCallback((ocr: OCRResult, pii: PIIScanResult) => {
     const canvas = canvasRef.current;
     const img = imageRef.current;
     if (!canvas || !img) return;
@@ -154,55 +190,85 @@ function OCRTestMode({ onClose }: OCRTestModeProps): JSX.Element {
     // Redraw image
     ctx.drawImage(img, 0, 0);
 
-    // Create set of PII region texts for quick lookup
-    const piiTexts = new Set(pii.map(p => p.region.text));
+    // Draw OCR text regions (if enabled)
+    if (showOCRBoxes) {
+      for (const region of ocr.regions) {
+        // Check if this region contains PII
+        const hasPII = pii.regions.some(p => p.originalText === region.text);
+        if (hasPII && showPIIBoxes) continue; // Skip - will be drawn by PII
 
-    // Draw text regions
-    for (const region of result.regions) {
-      const isPII = piiTexts.has(region.text);
+        // Set color based on confidence
+        if (region.confidence >= 0.8) {
+          ctx.strokeStyle = '#22c55e'; // Green
+          ctx.fillStyle = 'rgba(34, 197, 94, 0.1)';
+        } else if (region.confidence >= 0.5) {
+          ctx.strokeStyle = '#eab308'; // Yellow
+          ctx.fillStyle = 'rgba(234, 179, 8, 0.1)';
+        } else {
+          ctx.strokeStyle = '#6b7280'; // Gray
+          ctx.fillStyle = 'rgba(107, 114, 128, 0.1)';
+        }
 
-      if (showPIIOnly && !isPII) continue;
-
-      // Set colors based on confidence and PII status
-      if (isPII) {
-        ctx.strokeStyle = '#ef4444'; // Red for PII
-        ctx.fillStyle = 'rgba(239, 68, 68, 0.2)';
-      } else if (region.confidence >= 0.8) {
-        ctx.strokeStyle = '#22c55e'; // Green for high confidence
-        ctx.fillStyle = 'rgba(34, 197, 94, 0.1)';
-      } else if (region.confidence >= 0.5) {
-        ctx.strokeStyle = '#eab308'; // Yellow for medium confidence
-        ctx.fillStyle = 'rgba(234, 179, 8, 0.1)';
-      } else {
-        ctx.strokeStyle = '#6b7280'; // Gray for low confidence
-        ctx.fillStyle = 'rgba(107, 114, 128, 0.1)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([]);
+        ctx.fillRect(region.bounds.x, region.bounds.y, region.bounds.width, region.bounds.height);
+        ctx.strokeRect(region.bounds.x, region.bounds.y, region.bounds.width, region.bounds.height);
       }
-
-      ctx.lineWidth = 2;
-      ctx.fillRect(region.bounds.x, region.bounds.y, region.bounds.width, region.bounds.height);
-      ctx.strokeRect(region.bounds.x, region.bounds.y, region.bounds.width, region.bounds.height);
-
-      // Draw confidence percentage
-      ctx.fillStyle = isPII ? '#ef4444' : '#22c55e';
-      ctx.font = '12px monospace';
-      ctx.fillText(
-        `${Math.round(region.confidence * 100)}%`,
-        region.bounds.x,
-        region.bounds.y - 4
-      );
     }
-  }, [showPIIOnly]);
 
-  // Redraw when showPIIOnly changes
+    // Draw PII regions (if enabled)
+    if (showPIIBoxes) {
+      for (const piiRegion of pii.regions) {
+        const color = piiRegion.color || piiColors[piiRegion.type] || '#ef4444';
+
+        // Draw full region with type color
+        ctx.strokeStyle = color;
+        ctx.fillStyle = hexToRgba(color, 0.15);
+        ctx.lineWidth = 2;
+        ctx.setLineDash([]);
+        ctx.fillRect(piiRegion.bounds.x, piiRegion.bounds.y, piiRegion.bounds.width, piiRegion.bounds.height);
+        ctx.strokeRect(piiRegion.bounds.x, piiRegion.bounds.y, piiRegion.bounds.width, piiRegion.bounds.height);
+
+        // Draw precise match bounds (if enabled)
+        if (showPreciseBounds && piiRegion.matchStart !== undefined) {
+          const charWidth = piiRegion.bounds.width / Math.max(piiRegion.originalText.length, 1);
+          const matchX = piiRegion.bounds.x + piiRegion.matchStart * charWidth;
+          const matchWidth = (piiRegion.matchEnd - piiRegion.matchStart) * charWidth;
+
+          ctx.fillStyle = hexToRgba(color, 0.4);
+          ctx.fillRect(matchX, piiRegion.bounds.y, matchWidth, piiRegion.bounds.height);
+
+          // Draw dashed border for precise match
+          ctx.strokeStyle = color;
+          ctx.setLineDash([4, 2]);
+          ctx.strokeRect(matchX, piiRegion.bounds.y, matchWidth, piiRegion.bounds.height);
+        }
+
+        // Draw type label
+        const typeInfo = PII_TYPE_INFO[piiRegion.type.replace('custom:', '')] || { icon: '⚠️', name: piiRegion.type };
+        ctx.fillStyle = color;
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillText(
+          `${typeInfo.icon} ${typeInfo.name}`,
+          piiRegion.bounds.x,
+          piiRegion.bounds.y - 4
+        );
+      }
+    }
+
+    ctx.setLineDash([]);
+  }, [showOCRBoxes, showPIIBoxes, showPreciseBounds, piiColors]);
+
+  // Redraw when display options change
   useEffect(() => {
-    if (ocrResult && piiRegions) {
-      drawResults(ocrResult, piiRegions);
+    if (ocrResult && piiResult) {
+      drawResults(ocrResult, piiResult);
     }
-  }, [showPIIOnly, ocrResult, piiRegions, drawResults]);
+  }, [showOCRBoxes, showPIIBoxes, showPreciseBounds, ocrResult, piiResult, drawResults]);
 
-  // Handle canvas click to select region
+  // Handle canvas click
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!ocrResult) return;
+    if (!ocrResult || !piiResult) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -213,7 +279,21 @@ function OCRTestMode({ onClose }: OCRTestModeProps): JSX.Element {
     const x = (e.clientX - rect.left) * scaleX;
     const y = (e.clientY - rect.top) * scaleY;
 
-    // Find clicked region
+    // Check PII regions first
+    for (const pii of piiResult.regions) {
+      if (
+        x >= pii.bounds.x &&
+        x <= pii.bounds.x + pii.bounds.width &&
+        y >= pii.bounds.y &&
+        y <= pii.bounds.y + pii.bounds.height
+      ) {
+        setSelectedPII(pii);
+        setSelectedRegion(null);
+        return;
+      }
+    }
+
+    // Then check OCR regions
     for (const region of ocrResult.regions) {
       if (
         x >= region.bounds.x &&
@@ -222,23 +302,31 @@ function OCRTestMode({ onClose }: OCRTestModeProps): JSX.Element {
         y <= region.bounds.y + region.bounds.height
       ) {
         setSelectedRegion(region);
+        setSelectedPII(null);
         return;
       }
     }
+
     setSelectedRegion(null);
+    setSelectedPII(null);
   };
 
-  // Get PII types for a region
-  const getPIITypes = (text: string): string[] => {
-    const pii = piiRegions.find(p => p.region.text === text);
-    return pii?.piiTypes || [];
-  };
+  // Helper to convert hex color to rgba
+  function hexToRgba(hex: string, alpha: number): string {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
+  // Get unique PII types found
+  const piiTypesFound = piiResult ? Object.keys(piiResult.summary) : [];
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="ocr-test-container" onClick={(e) => e.stopPropagation()}>
         <div className="ocr-test-header">
-          <h2>OCR Test Mode</h2>
+          <h2>OCR Test Mode (Enhanced PII Detection)</h2>
           <div className="engine-badge">
             Engine: <strong>{engine}</strong>
           </div>
@@ -257,29 +345,47 @@ function OCRTestMode({ onClose }: OCRTestModeProps): JSX.Element {
                 onClick={handleProcessOCR}
                 disabled={!imageDataUrl || isProcessing}
               >
-                {isProcessing ? 'Processing...' : 'Run OCR'}
+                {isProcessing ? 'Processing...' : 'Run OCR + PII'}
               </button>
-              {ocrResult && (
+            </div>
+
+            {/* Display options */}
+            {ocrResult && (
+              <div className="ocr-display-options">
                 <label className="toggle-label">
                   <input
                     type="checkbox"
-                    checked={showPIIOnly}
-                    onChange={(e) => setShowPIIOnly(e.target.checked)}
+                    checked={showOCRBoxes}
+                    onChange={(e) => setShowOCRBoxes(e.target.checked)}
                   />
-                  Show PII Only
+                  OCR Boxes
                 </label>
-              )}
-            </div>
-
-            {error && (
-              <div className="ocr-error">{error}</div>
+                <label className="toggle-label">
+                  <input
+                    type="checkbox"
+                    checked={showPIIBoxes}
+                    onChange={(e) => setShowPIIBoxes(e.target.checked)}
+                  />
+                  PII Boxes
+                </label>
+                <label className="toggle-label">
+                  <input
+                    type="checkbox"
+                    checked={showPreciseBounds}
+                    onChange={(e) => setShowPreciseBounds(e.target.checked)}
+                  />
+                  Precise Match
+                </label>
+              </div>
             )}
+
+            {error && <div className="ocr-error">{error}</div>}
 
             <div className="ocr-canvas-container">
               {!imageDataUrl ? (
                 <div className="ocr-placeholder">
-                  <p>Select an image to test OCR text detection</p>
-                  <p className="hint">Supported formats: PNG, JPG, WebP, BMP, GIF</p>
+                  <p>Select an image to test OCR + PII detection</p>
+                  <p className="hint">Detects: SSN, Credit Cards, Emails, Phone Numbers, and more</p>
                 </div>
               ) : (
                 <canvas
@@ -299,30 +405,82 @@ function OCRTestMode({ onClose }: OCRTestModeProps): JSX.Element {
 
           {/* Right panel: Results */}
           <div className="ocr-test-results-panel">
-            {ocrResult ? (
+            {ocrResult && piiResult ? (
               <>
+                {/* Stats */}
                 <div className="ocr-stats">
                   <div className="stat-item">
-                    <span className="stat-label">Processing Time</span>
+                    <span className="stat-label">OCR Time</span>
                     <span className="stat-value">{ocrResult.processingTimeMs.toFixed(0)}ms</span>
                   </div>
                   <div className="stat-item">
-                    <span className="stat-label">Regions Found</span>
+                    <span className="stat-label">PII Time</span>
+                    <span className="stat-value">{piiResult.processingTimeMs.toFixed(1)}ms</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">Text Regions</span>
                     <span className="stat-value">{ocrResult.regions.length}</span>
                   </div>
                   <div className="stat-item">
-                    <span className="stat-label">PII Detected</span>
-                    <span className="stat-value pii-count">{piiRegions.length}</span>
-                  </div>
-                  <div className="stat-item">
-                    <span className="stat-label">Image Size</span>
-                    <span className="stat-value">{ocrResult.frameWidth}x{ocrResult.frameHeight}</span>
+                    <span className="stat-label">PII Found</span>
+                    <span className="stat-value pii-count">{piiResult.regions.length}</span>
                   </div>
                 </div>
 
-                {selectedRegion && (
+                {/* PII Summary by type */}
+                {piiTypesFound.length > 0 && (
+                  <div className="pii-summary">
+                    <h4>PII Types Detected</h4>
+                    <div className="pii-type-list">
+                      {piiTypesFound.map(type => {
+                        const info = PII_TYPE_INFO[type] || { icon: '⚠️', name: type, description: type };
+                        const color = piiColors[type] || '#ef4444';
+                        return (
+                          <div key={type} className="pii-type-item" style={{ borderLeftColor: color }}>
+                            <span className="pii-type-icon">{info.icon}</span>
+                            <span className="pii-type-name">{info.name}</span>
+                            <span className="pii-type-count">{piiResult.summary[type]}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Selected item details */}
+                {selectedPII && (
+                  <div className="ocr-selected-region pii-selected" style={{ borderLeftColor: selectedPII.color }}>
+                    <h4>Selected PII</h4>
+                    <div className="region-detail">
+                      <label>Type:</label>
+                      <span className="pii-type-badge" style={{ backgroundColor: hexToRgba(selectedPII.color, 0.2), color: selectedPII.color }}>
+                        {PII_TYPE_INFO[selectedPII.type]?.icon} {PII_TYPE_INFO[selectedPII.type]?.name || selectedPII.type}
+                      </span>
+                    </div>
+                    <div className="region-detail">
+                      <label>Matched:</label>
+                      <span className="region-text matched-text">{selectedPII.matchedText}</span>
+                    </div>
+                    <div className="region-detail">
+                      <label>Redacted:</label>
+                      <span className="region-text redacted-text">{selectedPII.redactedText}</span>
+                    </div>
+                    <div className="region-detail">
+                      <label>Confidence:</label>
+                      <span className={`confidence ${selectedPII.confidence}`}>
+                        {selectedPII.confidence}
+                      </span>
+                    </div>
+                    <div className="region-detail">
+                      <label>Full Text:</label>
+                      <span className="region-text">{selectedPII.originalText}</span>
+                    </div>
+                  </div>
+                )}
+
+                {selectedRegion && !selectedPII && (
                   <div className="ocr-selected-region">
-                    <h4>Selected Region</h4>
+                    <h4>Selected Text Region</h4>
                     <div className="region-detail">
                       <label>Text:</label>
                       <span className="region-text">{selectedRegion.text}</span>
@@ -340,65 +498,53 @@ function OCRTestMode({ onClose }: OCRTestModeProps): JSX.Element {
                         {selectedRegion.bounds.width}x{selectedRegion.bounds.height}
                       </span>
                     </div>
-                    {getPIITypes(selectedRegion.text).length > 0 && (
-                      <div className="region-detail pii-warning">
-                        <label>PII Types:</label>
-                        <span>{getPIITypes(selectedRegion.text).join(', ')}</span>
-                      </div>
-                    )}
                   </div>
                 )}
 
+                {/* PII Regions List */}
                 <div className="ocr-regions-list">
                   <h4>
-                    Detected Text
-                    {showPIIOnly && ` (${piiRegions.length} PII)`}
-                    {!showPIIOnly && ` (${ocrResult.regions.length} regions)`}
+                    {piiResult.regions.length > 0 ? 'PII Regions' : 'No PII Detected'}
+                    {piiResult.regions.length > 0 && ` (${piiResult.regions.length})`}
                   </h4>
                   <div className="regions-scroll">
-                    {ocrResult.regions
-                      .filter(r => !showPIIOnly || getPIITypes(r.text).length > 0)
-                      .map((region, idx) => {
-                        const piiTypes = getPIITypes(region.text);
-                        return (
-                          <div
-                            key={idx}
-                            className={`region-item ${selectedRegion === region ? 'selected' : ''} ${piiTypes.length > 0 ? 'pii' : ''}`}
-                            onClick={() => setSelectedRegion(region)}
-                          >
-                            <span className="region-text">{region.text}</span>
-                            <span className={`region-confidence ${region.confidence >= 0.8 ? 'high' : region.confidence >= 0.5 ? 'medium' : 'low'}`}>
-                              {Math.round(region.confidence * 100)}%
-                            </span>
-                            {piiTypes.length > 0 && (
-                              <span className="pii-badge">{piiTypes[0]}</span>
-                            )}
-                          </div>
-                        );
-                      })}
+                    {piiResult.regions.map((pii, idx) => {
+                      const info = PII_TYPE_INFO[pii.type] || { icon: '⚠️', name: pii.type };
+                      return (
+                        <div
+                          key={idx}
+                          className={`region-item pii ${selectedPII === pii ? 'selected' : ''}`}
+                          style={{ borderLeftColor: pii.color }}
+                          onClick={() => { setSelectedPII(pii); setSelectedRegion(null); }}
+                        >
+                          <span className="pii-icon">{info.icon}</span>
+                          <span className="region-text">{pii.matchedText}</span>
+                          <span className="pii-badge" style={{ backgroundColor: hexToRgba(pii.color, 0.2), color: pii.color }}>
+                            {info.name}
+                          </span>
+                        </div>
+                      );
+                    })}
+                    {piiResult.regions.length === 0 && ocrResult.regions.length > 0 && (
+                      <div className="no-pii-message">
+                        No PII detected in {ocrResult.regions.length} text regions
+                      </div>
+                    )}
                   </div>
                 </div>
               </>
             ) : (
               <div className="ocr-results-placeholder">
-                <p>Run OCR to see detected text regions</p>
+                <p>Run OCR + PII detection to analyze image</p>
                 <div className="ocr-legend">
-                  <h4>Legend</h4>
-                  <div className="legend-item">
-                    <span className="legend-color high"></span>
-                    <span>High confidence (&gt;80%)</span>
-                  </div>
-                  <div className="legend-item">
-                    <span className="legend-color medium"></span>
-                    <span>Medium confidence (50-80%)</span>
-                  </div>
-                  <div className="legend-item">
-                    <span className="legend-color low"></span>
-                    <span>Low confidence (&lt;50%)</span>
-                  </div>
-                  <div className="legend-item">
-                    <span className="legend-color pii"></span>
-                    <span>PII detected (email, phone, SSN, etc.)</span>
+                  <h4>PII Types Detected</h4>
+                  <div className="legend-grid">
+                    {Object.entries(PII_TYPE_INFO).slice(0, 8).map(([type, info]) => (
+                      <div key={type} className="legend-item">
+                        <span className="legend-color" style={{ borderColor: piiColors[type] || '#888', backgroundColor: hexToRgba(piiColors[type] || '#888', 0.2) }}></span>
+                        <span>{info.icon} {info.name}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
