@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { SessionRecord, SessionStats, AppSettings } from '../main/types';
+import type { SessionRecord, SessionStats, AppSettings, VideoRecording, VideoRecordingStats, ExportOptions } from '../main/types';
 
 // Expose protected methods that allow the renderer process to use
 // ipcRenderer without exposing the entire object
@@ -36,7 +36,7 @@ const api = {
     }
   },
 
-  // Recording operations
+  // Recording operations (screen capture)
   recording: {
     getSources: (): Promise<Array<{ id: string; name: string; type: string; thumbnailDataUrl?: string }>> =>
       ipcRenderer.invoke('recording:getSources'),
@@ -46,6 +46,23 @@ const api = {
       ipcRenderer.invoke('recording:stop'),
     isActive: (): Promise<boolean> =>
       ipcRenderer.invoke('recording:isActive')
+  },
+
+  // Video recordings management
+  recordings: {
+    getAll: (): Promise<VideoRecording[]> => ipcRenderer.invoke('recordings:getAll'),
+    get: (id: string): Promise<VideoRecording | null> => ipcRenderer.invoke('recordings:get', id),
+    save: (recording: VideoRecording): Promise<boolean> => ipcRenderer.invoke('recordings:save', recording),
+    update: (id: string, updates: Partial<VideoRecording>): Promise<boolean> =>
+      ipcRenderer.invoke('recordings:update', id, updates),
+    delete: (id: string): Promise<boolean> => ipcRenderer.invoke('recordings:delete', id),
+    stats: (): Promise<VideoRecordingStats> => ipcRenderer.invoke('recordings:stats'),
+    generateThumbnail: (id: string): Promise<string | null> => ipcRenderer.invoke('recordings:generateThumbnail', id),
+    export: (id: string, options: ExportOptions): Promise<string | null> =>
+      ipcRenderer.invoke('recordings:export', id, options),
+    import: (): Promise<VideoRecording | null> => ipcRenderer.invoke('recordings:import'),
+    getPath: (): Promise<string> => ipcRenderer.invoke('recordings:getPath'),
+    openFolder: (): Promise<void> => ipcRenderer.invoke('recordings:openFolder')
   }
 };
 

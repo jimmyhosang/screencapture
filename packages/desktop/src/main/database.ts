@@ -36,7 +36,27 @@ export function initDatabase(): void {
       value TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS recordings (
+      id TEXT PRIMARY KEY,
+      filename TEXT NOT NULL,
+      sourceType TEXT NOT NULL,
+      sourceName TEXT NOT NULL,
+      duration INTEGER NOT NULL,
+      startTime INTEGER NOT NULL,
+      resolution TEXT NOT NULL,
+      fps INTEGER NOT NULL,
+      fileSize INTEGER NOT NULL,
+      filePath TEXT NOT NULL,
+      thumbnailPath TEXT,
+      redactionConfig TEXT,
+      status TEXT NOT NULL DEFAULT 'ready',
+      createdAt INTEGER NOT NULL,
+      updatedAt INTEGER NOT NULL
+    );
+
     CREATE INDEX IF NOT EXISTS idx_sessions_timestamp ON sessions(timestamp DESC);
+    CREATE INDEX IF NOT EXISTS idx_recordings_startTime ON recordings(startTime DESC);
+    CREATE INDEX IF NOT EXISTS idx_recordings_status ON recordings(status);
   `);
 }
 
@@ -52,4 +72,22 @@ export function closeDatabase(): void {
     db.close();
     db = null;
   }
+}
+
+export function getRecordingsPath(): string {
+  const userDataPath = app.getPath('userData');
+  const recordingsPath = join(userDataPath, 'recordings');
+  if (!existsSync(recordingsPath)) {
+    mkdirSync(recordingsPath, { recursive: true });
+  }
+  return recordingsPath;
+}
+
+export function getThumbnailsPath(): string {
+  const userDataPath = app.getPath('userData');
+  const thumbnailsPath = join(userDataPath, 'thumbnails');
+  if (!existsSync(thumbnailsPath)) {
+    mkdirSync(thumbnailsPath, { recursive: true });
+  }
+  return thumbnailsPath;
 }

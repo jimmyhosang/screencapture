@@ -2,7 +2,7 @@ import { app, shell, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage } f
 import { join } from 'path';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import { initDatabase, getDatabase } from './database';
-import { setupRecordingHandlers } from './recorder';
+import { setupRecordingHandlers } from './recordings';
 import type { SessionRecord, SessionStats, AppSettings } from './types';
 
 let mainWindow: BrowserWindow | null = null;
@@ -290,7 +290,8 @@ function setupIpcHandlers(): void {
         blockSensitive: true,
         maskPiiPatterns: true
       },
-      autoImportPath: null
+      autoImportPath: null,
+      recordingsPath: null
     };
   });
 
