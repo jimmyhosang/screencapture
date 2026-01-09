@@ -48,6 +48,16 @@ import type {
   ManagedRecording,
   RecordingManagerConfig
 } from '../main/services/recording-manager';
+import type {
+  StorageConfig,
+  StorageStats,
+  StoragePaths
+} from '../main/services/storage-manager';
+import type {
+  IndexedRecording,
+  RecordingFilter,
+  PaginatedRecordings
+} from '../main/services/recording-indexer';
 
 // Expose protected methods that allow the renderer process to use
 // ipcRenderer without exposing the entire object
@@ -470,6 +480,44 @@ const api = {
       ipcRenderer.invoke('recordingManager:getConfig'),
     updateConfig: (config: Partial<RecordingManagerConfig>): Promise<RecordingManagerConfig> =>
       ipcRenderer.invoke('recordingManager:updateConfig', config)
+  },
+
+  // Storage Manager (paths, disk monitoring, cleanup)
+  storage: {
+    getStats: (): Promise<StorageStats> =>
+      ipcRenderer.invoke('storage:getStats'),
+    getPaths: (): Promise<StoragePaths> =>
+      ipcRenderer.invoke('storage:getPaths'),
+    getConfig: (): Promise<StorageConfig> =>
+      ipcRenderer.invoke('storage:getConfig'),
+    updateConfig: (config: Partial<StorageConfig>): Promise<StorageConfig> =>
+      ipcRenderer.invoke('storage:updateConfig', config),
+    cleanup: (): Promise<{ deleted: number; freedBytes: number }> =>
+      ipcRenderer.invoke('storage:cleanup'),
+    checkDiskSpace: (): Promise<{ isLow: boolean; stats: StorageStats }> =>
+      ipcRenderer.invoke('storage:checkDiskSpace')
+  },
+
+  // Recording Indexer (SQLite indexing, metadata, thumbnails)
+  indexer: {
+    list: (filter?: Partial<RecordingFilter>, page?: number, pageSize?: number): Promise<PaginatedRecordings> =>
+      ipcRenderer.invoke('indexer:list', filter || {}, page || 1, pageSize || 20),
+    get: (id: string): Promise<IndexedRecording | null> =>
+      ipcRenderer.invoke('indexer:get', id),
+    getVideoPath: (id: string): Promise<string | null> =>
+      ipcRenderer.invoke('indexer:getVideoPath', id),
+    updateStatus: (id: string, status: IndexedRecording['status']): Promise<boolean> =>
+      ipcRenderer.invoke('indexer:updateStatus', id, status),
+    updateMetadata: (id: string, metadata: Partial<Pick<IndexedRecording, 'tags' | 'notes'>>): Promise<boolean> =>
+      ipcRenderer.invoke('indexer:updateMetadata', id, metadata),
+    delete: (id: string): Promise<boolean> =>
+      ipcRenderer.invoke('indexer:delete', id),
+    export: (id: string, outputPath: string): Promise<boolean> =>
+      ipcRenderer.invoke('indexer:export', id, outputPath),
+    indexAll: (): Promise<{ indexed: number; errors: number }> =>
+      ipcRenderer.invoke('indexer:indexAll'),
+    reindex: (id: string): Promise<IndexedRecording | null> =>
+      ipcRenderer.invoke('indexer:reindex', id)
   }
 };
 

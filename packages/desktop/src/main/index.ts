@@ -9,7 +9,14 @@ import { setupRedactionHandlers } from './redaction';
 import { setupPerformanceHandlers } from './performance';
 import { setupTaskHandlers } from './workers/taskManager';
 import { setupCCaaSHandlers, initCCaaS, cleanupCCaaS } from './ccaas';
-import { setupRecordingManagerHandlers, shutdownRecordingManager } from './services';
+import {
+  setupRecordingManagerHandlers,
+  shutdownRecordingManager,
+  setupStorageHandlers,
+  shutdownStorageManager,
+  setupIndexerHandlers,
+  shutdownRecordingIndexer
+} from './services';
 import type { SessionRecord, SessionStats, AppSettings } from './types';
 
 let mainWindow: BrowserWindow | null = null;
@@ -455,6 +462,8 @@ app.whenReady().then(() => {
   setupTaskHandlers();
   setupCCaaSHandlers();
   setupRecordingManagerHandlers();
+  setupStorageHandlers();
+  setupIndexerHandlers();
   setupKeyboardShortcuts();
 
   // Create window and tray
@@ -480,5 +489,7 @@ app.on('before-quit', async () => {
   app.isQuitting = true;
   globalShortcut.unregisterAll();
   await shutdownRecordingManager();
+  shutdownStorageManager();
+  shutdownRecordingIndexer();
   cleanupCCaaS();
 });

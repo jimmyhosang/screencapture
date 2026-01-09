@@ -23,3 +23,25 @@ export {
   type ManagedRecording,
   type RecordingManagerConfig
 } from './recording-manager';
+
+export {
+  StorageManager,
+  getStorageManager,
+  setupStorageHandlers,
+  shutdownStorageManager,
+  type StorageConfig,
+  type StorageStats,
+  type StoragePaths,
+  type RecordingPaths
+} from './storage-manager';
+
+export {
+  RecordingIndexer,
+  getRecordingIndexer,
+  setupIndexerHandlers,
+  shutdownRecordingIndexer,
+  type IndexedRecording,
+  type RecordingMetadata,
+  type RecordingFilter,
+  type PaginatedRecordings
+} from './recording-indexer';
