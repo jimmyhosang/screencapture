@@ -1,2 +1,4 @@
 packages:
-  - 'packages/*'
+  - packages/*
+
+onlyBuiltDependencies: electron,better-sqlite3,esbuild

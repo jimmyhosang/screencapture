@@ -1,10 +1,39 @@
-# Screen Capture - Session Recording & Replay
+# Screencapture
 
-A comprehensive session recording and replay system built with [rrweb](https://www.rrweb.io/). Available as both a web application and browser extension.
+A comprehensive screen recording and session replay platform with advanced privacy controls, PII detection, and cross-platform support. Built as a monorepo with a Chrome extension, Electron desktop app, and shared core library.
 
-## 📦 Packages
+## Packages
 
-This is a pnpm monorepo containing:
+| Package | Description |
+|---------|-------------|
+| `@screencapture/desktop` | Electron desktop app with SQLite storage, OCR, and video export |
+| `@screencapture/extension` | Chrome extension for browser session recording |
+| `@screencapture/core` | Shared utilities for PII detection and privacy |
+
+## Key Features
+
+### Privacy-First Recording
+- **Automatic PII Detection**: OCR-based text detection with pattern matching for emails, phone numbers, SSNs, credit cards, and more
+- **Visual Redaction**: Multiple styles (solid, blur, pixelate, pattern) with real-time or post-process modes
+- **Manual Redaction Tools**: Draw regions to mark sensitive areas, with static, tracked, or temporary region types
+- **App/Window Blocking**: Automatically blur specific applications (Slack, Discord, password managers)
+- **Redaction Profiles**: Save and share configurations with presets for HIPAA, Financial, and Demo modes
+
+### Desktop Application
+- **Screen Recording**: Capture screens and windows with configurable quality
+- **OCR Text Detection**: Real-time text recognition for PII scanning
+- **Video Export**: Export recordings with FFmpeg integration
+- **Session Management**: SQLite storage with import/export capabilities
+- **Performance Monitoring**: Real-time FPS, memory, CPU tracking with bottleneck detection
+- **Background Processing**: Async task queue for exports, OCR, and redaction
+- **Quality Presets**: Low (15fps/480p), Medium (24fps/720p), High (30fps/1080p), Ultra (60fps/native)
+- **Global Shortcuts**: Control recording from anywhere with keyboard shortcuts
+- **System Tray**: Quick access to recording controls and status
+
+### Browser Extension
+- **Session Recording**: Capture DOM interactions using rrweb
+- **Privacy Controls**: Mask inputs, block elements, configurable redaction
+- **Session Export**: Save and export recordings as JSON
 
 - **[@screencapture/app](./packages/app)** - Full-featured React web application
 - **[@screencapture/extension](./packages/extension)** - Chrome/Firefox browser extension
@@ -42,122 +71,207 @@ This is a pnpm monorepo containing:
 - Node.js 22.12+ (we use v22.21.1)
 - pnpm 10+
 
-### Installation
+### Desktop App
 
 ```bash
-# Install pnpm globally if you haven't
-npm install -g pnpm
-
-# Clone repository
-git clone https://github.com/jimmyhosang/screencapture
+# Clone the repository
+git clone https://github.com/jimmyhosang/screencapture.git
 cd screencapture
 
-# Install all dependencies
+# Install dependencies
 pnpm install
+
+# Start development
+pnpm --filter @screencapture/desktop dev
+
+# Build for production
+pnpm --filter @screencapture/desktop build
 ```
 
-### Run Web App
+### Chrome Extension
 
 ```bash
-# Start development server
-pnpm dev
-
-# Open http://localhost:5173
-```
-
-### Build Extension
-
-```bash
-# Build extension
+# Build the extension
 pnpm --filter @screencapture/extension build
 
 # Load in Chrome:
-# 1. Go to chrome://extensions/
-# 2. Enable Developer mode
+# 1. Open chrome://extensions/
+# 2. Enable "Developer mode"
 # 3. Click "Load unpacked"
-# 4. Select packages/extension/dist/
+# 4. Select packages/extension/dist
 ```
 
-## 📚 Documentation
-
-- [Root CLAUDE.md](./CLAUDE.md) - Monorepo structure and commands
-- [App CLAUDE.md](./packages/app/CLAUDE.md) - Detailed app architecture
-- [Extension README](./packages/extension/README.md) - Extension development guide
-
-## 🛠️ Development
-
-### Build Commands
-
-```bash
-# Build everything
-pnpm build
-
-# Build specific package
-pnpm --filter @screencapture/app build
-pnpm --filter @screencapture/extension build
-
-# Run tests
-pnpm test
-
-# Run linters
-pnpm lint
-```
-
-### Project Structure
+## Architecture
 
 ```
 screencapture/
 ├── packages/
-│   ├── app/              # React web application
+│   ├── desktop/              # Electron desktop application
 │   │   ├── src/
-│   │   │   ├── components/  # SessionHistory, Settings, PlayerModal
-│   │   │   ├── hooks/       # useRecorder, useSessionManager
-│   │   │   ├── utils/       # sessionStorage utilities
-│   │   │   └── App.tsx
-│   │   └── package.json
-│   └── extension/        # Browser extension
-│       ├── src/
-│       │   ├── background/  # Service worker
-│       │   ├── content/     # Content script (rrweb injection)
-│       │   ├── popup/       # Extension popup UI
-│       │   └── manifest.json
-│       └── package.json
-├── pnpm-workspace.yaml   # pnpm workspace config
-└── package.json          # Root package with scripts
+│   │   │   ├── main/         # Electron main process
+│   │   │   │   ├── ocr/      # Text detection services
+│   │   │   │   ├── redaction/# Redaction rendering
+│   │   │   │   ├── workers/  # Background task manager
+│   │   │   │   └── performance/ # Performance monitoring
+│   │   │   ├── preload/      # Context bridge
+│   │   │   └── renderer/     # React UI
+│   │   └── electron.vite.config.ts
+│   │
+│   ├── extension/            # Chrome browser extension
+│   │   ├── src/
+│   │   │   ├── background/   # Service worker
+│   │   │   ├── content/      # Content script (rrweb)
+│   │   │   └── popup/        # React popup UI
+│   │   └── vite.config.ts
+│   │
+│   └── core/                 # Shared utilities
+│       └── src/
+│           └── utils/        # PII detection, redaction
+│
+└── src/                      # Web app (React + rrweb)
+    ├── hooks/                # Recording hooks
+    ├── components/           # UI components
+    └── utils/                # Utilities
 ```
 
-## 🎯 Use Cases
+## Desktop App Features
 
-### Web App
-- **User Testing**: Record and analyze user interactions
-- **Bug Reproduction**: Capture exact steps leading to bugs
-- **Training**: Record demos and walkthroughs
-- **Analytics**: Understand user behavior patterns
+### Performance Monitoring
 
-### Extension
-- **QA Testing**: Record sessions while testing web apps
-- **Support**: Users can record issues and send recordings
-- **Compliance**: Capture sessions for audit trails
-- **Research**: UX research and usability testing
+Real-time tracking with three view modes:
 
-## 🔧 Technical Stack
+- **Summary**: Quick stats (FPS, frame time, memory, CPU)
+- **Detailed**: Processing pipeline breakdown (capture, OCR, PII scan, redaction times)
+- **Chart**: Historical graphs for FPS, memory, and frame time
 
-- **Frontend**: React 19, TypeScript, Vite
-- **Recording**: rrweb, rrweb-player
-- **Monorepo**: pnpm workspaces
-- **Storage**: localStorage (app), chrome.storage (extension)
-- **Build**: Vite, vite-plugin-web-extension
+### Keyboard Shortcuts
 
-## 📝 License
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl+Shift+R` | Start/Stop Recording |
+| `Ctrl+Shift+P` | Pause/Resume Recording |
+| `Ctrl+Shift+S` | Quick Screenshot |
+| `Ctrl+Shift+M` | Toggle Performance Monitor |
+
+### Redaction System
+
+**Automatic Detection:**
+- Email addresses
+- Phone numbers (US formats)
+- Social Security Numbers
+- Credit card numbers
+- Dates of birth
+- Custom patterns via regex
+
+**Manual Tools:**
+- Rectangle drawing tool for region marking
+- Region types: static, tracked (follows content), temporary
+- Timeline editor for time-based redactions
+- App blocking rules with pattern matching
+
+**Redaction Styles:**
+- Solid color overlay
+- Gaussian blur (configurable intensity)
+- Pixelation
+- Pattern fill
+
+### Quality Options
+
+| Preset | Frame Rate | Resolution | Est. Size |
+|--------|------------|------------|-----------|
+| Low | 15 fps | 480p | ~50MB/hr |
+| Medium | 24 fps | 720p | ~150MB/hr |
+| High | 30 fps | 1080p | ~350MB/hr |
+| Ultra | 60 fps | Native | ~700MB/hr |
+
+### Background Tasks
+
+Heavy operations run in the background with:
+- Priority-based queuing (high/normal/low)
+- Progress tracking with real-time updates
+- Cancellation support
+- Task types: export, redaction, OCR, thumbnail, analysis
+
+## Privacy Compliance
+
+### Built-in Presets
+
+- **HIPAA Compliant**: SSN, DOB, medical record numbers, addresses
+- **Financial Privacy**: SSN, credit cards, bank accounts, tax IDs
+- **Demo Mode**: Email, phone (minimal redaction for demos)
+
+### Custom Patterns
+
+```typescript
+// Add custom PII pattern
+await window.api.pii.addPattern(
+  'employee-id',
+  /EMP-\d{6}/gi,
+  '[EMPLOYEE_ID]',
+  'high'
+);
+```
+
+## Development
+
+### Commands
+
+```bash
+# Install all dependencies
+pnpm install
+
+# Start desktop app development
+pnpm --filter @screencapture/desktop dev
+
+# Build desktop app
+pnpm --filter @screencapture/desktop build
+
+# Build extension
+pnpm --filter @screencapture/extension build
+
+# Run linter
+pnpm run lint
+```
+
+### Building Distributables
+
+```bash
+# Build for current platform
+pnpm --filter @screencapture/desktop build:unpack
+
+# Build for specific platforms
+pnpm --filter @screencapture/desktop build:mac
+pnpm --filter @screencapture/desktop build:win
+pnpm --filter @screencapture/desktop build:linux
+```
+
+## Technology Stack
+
+- **Framework**: Electron + React 19
+- **Build**: Vite + electron-vite
+- **Database**: SQLite (better-sqlite3)
+- **Recording**: rrweb for DOM, native screen capture for video
+- **OCR**: Tesseract.js / Native TextDetector API
+- **Video**: FFmpeg for export and processing
+- **Language**: TypeScript (strict mode)
+
+## Security
+
+- Context isolation enabled
+- Node integration disabled
+- Sandboxed renderer process
+- IPC-based communication only
+- No external network calls for PII processing
+
+## License
 
 MIT
 
-## 🤝 Contributing
+## Contributing
 
-Contributions welcome! Please read the documentation in each package for development guidelines.
+Contributions are welcome! Please read our contributing guidelines before submitting PRs.
 
-## 🔗 Links
+## Support
 
-- [rrweb Documentation](https://www.rrweb.io/)
-- [Chrome Extension Docs](https://developer.chrome.com/docs/extensions/)
-- [pnpm Workspaces](https://pnpm.io/workspaces)
+- [Report Issues](https://github.com/jimmyhosang/screencapture/issues)
+- [Documentation](https://github.com/jimmyhosang/screencapture/wiki)

@@ -1,102 +1,90 @@
-# Screen Capture Browser Extension
+# @screencapture/extension
 
-A Chrome/Firefox browser extension for recording and replaying user sessions with rrweb.
+Chrome browser extension for screencapture - record and replay browser sessions with privacy-first PII redaction.
 
 ## Features
 
-- 🎥 Record user sessions on any website
-- 🔒 Privacy controls (mask inputs, block sensitive elements)
-- 💾 Save recordings to browser storage
-- ▶️ View recording history
-- 🎬 Simple popup UI for controlling recordings
+- **Session Recording**: Record DOM interactions using rrweb
+- **PII Redaction**: Automatic redaction of emails, phone numbers, SSNs, credit cards
+- **Privacy Controls**: Mask inputs, block elements, configurable redaction settings
+- **Session Management**: Save, export, and delete recordings via chrome.storage
+- **Visual Indicator**: Shows recording status on page
+
+## Installation (Development)
+
+1. Build the extension:
+   ```bash
+   # From the monorepo root
+   pnpm install
+   pnpm --filter @screencapture/extension build
+   ```
+
+2. Load in Chrome:
+   - Open `chrome://extensions/`
+   - Enable "Developer mode" (top right toggle)
+   - Click "Load unpacked"
+   - Select the `packages/extension/dist` folder
 
 ## Development
 
-### Build the Extension
-
 ```bash
-# From monorepo root
-pnpm --filter @screencapture/extension build
-
-# Watch mode for development
+# Watch mode (rebuilds on file changes)
 pnpm --filter @screencapture/extension dev
+
+# Build once
+pnpm --filter @screencapture/extension build
 ```
 
-### Load in Chrome
-
-1. Build the extension (see above)
-2. Open Chrome and go to `chrome://extensions/`
-3. Enable "Developer mode" (toggle in top right)
-4. Click "Load unpacked"
-5. Select the `dist/` folder from this package
-
-### Load in Firefox
-
-1. Build the extension
-2. Open Firefox and go to `about:debugging`
-3. Click "This Firefox"
-4. Click "Load Temporary Add-on"
-5. Select the `dist/manifest.json` file
-
-## Structure
+## Architecture
 
 ```
-src/
-├── background/       # Service worker (message passing)
-│   └── index.ts
-├── content/          # Content script (injected into pages)
-│   └── index.ts
-├── popup/            # Extension popup UI
-│   ├── index.html
-│   └── index.ts
-├── manifest.json     # Extension manifest (v3)
-public/
-└── icons/            # Extension icons (16, 48, 128px)
+packages/extension/
+├── src/
+│   ├── background/       # Service worker - session management, chrome.storage
+│   │   └── index.ts
+│   ├── content/          # Content script - rrweb recording, PII redaction
+│   │   └── index.ts
+│   ├── popup/            # React popup UI
+│   │   ├── App.tsx
+│   │   ├── main.tsx
+│   │   ├── styles.css
+│   │   └── index.html
+│   └── types/            # Shared TypeScript types
+│       └── index.ts
+├── public/
+│   ├── manifest.json     # Chrome MV3 manifest
+│   └── icons/            # Extension icons
+├── dist/                 # Built extension (load this in Chrome)
+├── vite.config.ts        # Vite build config
+├── tsconfig.json         # TypeScript config
+└── package.json
 ```
 
-## How It Works
+## Privacy Settings
 
-1. **Content Script** (`src/content/index.ts`)
-   - Injected into every web page
-   - Uses rrweb to record DOM events
-   - Communicates with background and popup
+The extension supports configurable privacy settings:
 
-2. **Background Script** (`src/background/index.ts`)
-   - Service worker for message passing
-   - Manages extension state
-   - Handles storage operations
-
-3. **Popup** (`src/popup/`)
-   - UI for starting/stopping recordings
-   - Shows recording status
-   - Displays recent recordings
-   - Privacy settings controls
-
-## Privacy Features
-
-- **Mask All Inputs**: Replace input values with asterisks
-- **Block Sensitive Elements**: Hide elements with `.sensitive` or `.pii` classes
+- **Mask All Inputs**: Replace all input values with asterisks
+- **Mask Text Content**: Apply PII pattern redaction to text
+- **Block Selectors**: CSS selectors for elements to exclude from recording
+- **Redaction Config**: Toggle which PII types to redact (email, phone, SSN, credit card)
 
 ## Storage
 
-Recordings are saved to `chrome.storage.local` with metadata:
-- Recording ID
-- Timestamp
-- Duration
-- Event count
-- URL where recorded
-- Privacy configuration
+- Sessions are stored in `chrome.storage.local`
+- Settings are synced via `chrome.storage.sync`
+- Default storage limit: 50MB (configurable)
 
-## Permissions
+## Shared Code
 
-- `activeTab`: Access current tab for recording
-- `storage`: Save recordings
-- `tabs`: Communicate with tabs
-- `<all_urls>`: Inject content script on all pages
+The extension uses `@screencapture/core` for:
+- PII detection and redaction utilities
+- Privacy configuration types
+- Performance utilities
 
-## TODO
+## Future Plans
 
-- Add placeholder icons to `public/icons/` (16x16, 48x48, 128x128 PNG)
-- Export recordings as JSON files
-- Sync recordings across devices
-- Playback UI in extension
+- Native messaging for desktop app integration
+- Firefox support
+- Session replay in popup
+- Cloud sync support

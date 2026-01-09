@@ -1,0 +1,62 @@
+{
+  "name": "@screencapture/core",
+  "version": "1.0.0",
+  "description": "Core utilities for screencapture - PII detection, redaction, and recording helpers",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./privacy": {
+      "import": "./dist/privacy/index.js",
+      "types": "./dist/privacy/index.d.ts"
+    },
+    "./performance": {
+      "import": "./dist/performance/index.js",
+      "types": "./dist/performance/index.d.ts"
+    },
+    "./session": {
+      "import": "./dist/session/index.js",
+      "types": "./dist/session/index.d.ts"
+    },
+    "./recorder": {
+      "import": "./dist/recorder/index.js",
+      "types": "./dist/recorder/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src/",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "rrweb": "^2.0.0-alpha.4"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "typescript": "~5.9.3",
+    "vitest": "^4.0.16"
+  },
+  "peerDependencies": {
+    "@rrweb/types": "^2.0.0-alpha.4"
+  },
+  "keywords": [
+    "pii",
+    "redaction",
+    "privacy",
+    "rrweb",
+    "session-recording"
+  ],
+  "license": "MIT"
+}
