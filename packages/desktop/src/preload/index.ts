@@ -1193,6 +1193,45 @@ const api = {
       reason?: string;
     }> =>
       ipcRenderer.invoke('privacy:getDecision')
+  },
+
+  // OS Permissions (macOS Screen Recording, Accessibility)
+  permissions: {
+    check: (): Promise<{
+      allGranted: boolean;
+      status: {
+        screenCapture: 'granted' | 'denied' | 'not-determined' | 'restricted' | 'unknown';
+        accessibility: 'granted' | 'denied' | 'not-determined' | 'restricted' | 'unknown';
+        microphone: 'granted' | 'denied' | 'not-determined' | 'restricted' | 'unknown';
+      };
+      platform: string;
+      missingPermissions: string[];
+    }> =>
+      ipcRenderer.invoke('permissions:check'),
+    getStatus: (): Promise<{
+      screenCapture: 'granted' | 'denied' | 'not-determined' | 'restricted' | 'unknown';
+      accessibility: 'granted' | 'denied' | 'not-determined' | 'restricted' | 'unknown';
+      microphone: 'granted' | 'denied' | 'not-determined' | 'restricted' | 'unknown';
+    }> =>
+      ipcRenderer.invoke('permissions:getStatus'),
+    canCaptureScreen: (): Promise<boolean> =>
+      ipcRenderer.invoke('permissions:canCaptureScreen'),
+    canTrackInput: (): Promise<boolean> =>
+      ipcRenderer.invoke('permissions:canTrackInput'),
+    requestScreenCapture: (): Promise<boolean> =>
+      ipcRenderer.invoke('permissions:requestScreenCapture'),
+    requestAccessibility: (): Promise<boolean> =>
+      ipcRenderer.invoke('permissions:requestAccessibility'),
+    requestMicrophone: (): Promise<boolean> =>
+      ipcRenderer.invoke('permissions:requestMicrophone'),
+    openSettings: (permission: 'screenCapture' | 'accessibility' | 'microphone'): Promise<boolean> =>
+      ipcRenderer.invoke('permissions:openSettings', permission),
+    showDialog: (): Promise<{
+      screenCapture: boolean;
+      accessibility: boolean;
+      cancelled: boolean;
+    }> =>
+      ipcRenderer.invoke('permissions:showDialog')
   }
 };
 
