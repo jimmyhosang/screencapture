@@ -14,7 +14,7 @@ vi.mock('electron', () => ({
 }));
 
 vi.mock('active-win', () => ({
-  default: vi.fn(async () => ({
+  activeWindow: vi.fn(async () => ({
     title: 'VS Code - project',
     owner: {
       name: 'code',
@@ -35,7 +35,7 @@ import {
   getActiveWindowTracker,
   resetActiveWindowTracker
 } from '../active-window-tracker';
-import activeWin from 'active-win';
+import { activeWindow } from 'active-win';
 import { getActiveWindowRepository } from '../../ccaas/repositories';
 
 describe('ActiveWindowTracker', () => {
@@ -92,7 +92,7 @@ describe('ActiveWindowTracker', () => {
       tracker.start('rec-123');
       // Initial capture happens synchronously in start
       await vi.advanceTimersByTimeAsync(0);
-      expect(activeWin).toHaveBeenCalled();
+      expect(activeWindow).toHaveBeenCalled();
     });
   });
 
@@ -132,7 +132,7 @@ describe('ActiveWindowTracker', () => {
       await vi.advanceTimersByTimeAsync(2000);
 
       // Should not capture while paused
-      expect(activeWin).not.toHaveBeenCalled();
+      expect(activeWindow).not.toHaveBeenCalled();
     });
 
     it('should resume tracking', async () => {
@@ -143,7 +143,7 @@ describe('ActiveWindowTracker', () => {
       vi.clearAllMocks();
       await vi.advanceTimersByTimeAsync(1000);
 
-      expect(activeWin).toHaveBeenCalled();
+      expect(activeWindow).toHaveBeenCalled();
     });
   });
 
@@ -173,14 +173,14 @@ describe('ActiveWindowTracker', () => {
       vi.clearAllMocks();
       await vi.advanceTimersByTimeAsync(500);
 
-      expect(activeWin).toHaveBeenCalled();
+      expect(activeWindow).toHaveBeenCalled();
     });
   });
 
   describe('Window Change Detection', () => {
     it('should only log when window changes', async () => {
       // Mock same window twice, then different window
-      const mockActiveWin = vi.mocked(activeWin);
+      const mockActiveWin = vi.mocked(activeWindow);
       mockActiveWin
         .mockResolvedValueOnce({
           title: 'VS Code',
@@ -241,7 +241,7 @@ describe('Browser Detection', () => {
   });
 
   it('should extract URL from browser title with URL', async () => {
-    const mockActiveWin = vi.mocked(activeWin);
+    const mockActiveWin = vi.mocked(activeWindow);
     mockActiveWin.mockResolvedValueOnce({
       title: 'https://github.com/anthropics - Google Chrome',
       owner: { name: 'Google Chrome', processId: 1234 },
@@ -256,7 +256,7 @@ describe('Browser Detection', () => {
   });
 
   it('should extract domain from browser title', async () => {
-    const mockActiveWin = vi.mocked(activeWin);
+    const mockActiveWin = vi.mocked(activeWindow);
     mockActiveWin.mockResolvedValueOnce({
       title: 'GitHub - Where software is built - mozilla.org',
       owner: { name: 'Firefox', processId: 1234 },

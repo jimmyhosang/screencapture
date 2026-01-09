@@ -6,8 +6,17 @@
  */
 
 import { BrowserWindow } from 'electron';
-import activeWin from 'active-win';
 import { getActiveWindowRepository } from '../ccaas/repositories';
+
+// Dynamic import with fallback for active-win (has native module compatibility issues with Electron)
+let activeWindow: (() => Promise<any>) | null = null;
+try {
+  // @ts-ignore - dynamic import
+  const activeWinModule = require('active-win');
+  activeWindow = activeWinModule.activeWindow || activeWinModule.default;
+} catch (error) {
+  console.warn('[ActiveWindowTracker] active-win module not available:', (error as Error).message);
+}
 
 // =============================================================================
 // Types
@@ -203,8 +212,13 @@ export class ActiveWindowTracker {
    * Capture current active window
    */
   private async captureWindow(): Promise<void> {
+    // Skip if active-win module is not available
+    if (!activeWindow) {
+      return;
+    }
+
     try {
-      const result = await activeWin();
+      const result = await activeWindow();
 
       if (!result) {
         return;
@@ -216,11 +230,11 @@ export class ActiveWindowTracker {
         processId: result.owner?.processId || 0,
         bounds: result.bounds
           ? {
-              x: result.bounds.x,
-              y: result.bounds.y,
-              width: result.bounds.width,
-              height: result.bounds.height
-            }
+            x: result.bounds.x,
+            y: result.bounds.y,
+            width: result.bounds.width,
+            height: result.bounds.height
+          }
           : undefined
       };
 

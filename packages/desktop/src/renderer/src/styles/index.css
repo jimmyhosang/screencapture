@@ -293,6 +293,8 @@ body {
 .settings-page {
   padding: 24px;
   max-width: 600px;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .settings-section {
@@ -1260,7 +1262,7 @@ body {
   color: var(--text-secondary);
 }
 
-.ocr-results-placeholder > p {
+.ocr-results-placeholder>p {
   margin-bottom: 24px;
 }
 
@@ -1580,31 +1582,25 @@ body {
 }
 
 .preview-sample.style-pixelate .redaction-overlay {
-  background: repeating-linear-gradient(
-    0deg,
-    rgba(0, 0, 0, 0.8) 0px,
-    rgba(0, 0, 0, 0.8) 4px,
-    rgba(50, 50, 50, 0.8) 4px,
-    rgba(50, 50, 50, 0.8) 8px
-  );
+  background: repeating-linear-gradient(0deg,
+      rgba(0, 0, 0, 0.8) 0px,
+      rgba(0, 0, 0, 0.8) 4px,
+      rgba(50, 50, 50, 0.8) 4px,
+      rgba(50, 50, 50, 0.8) 8px);
 }
 
 .preview-sample.style-pattern .redaction-overlay {
   background:
-    repeating-linear-gradient(
-      45deg,
+    repeating-linear-gradient(45deg,
       transparent,
       transparent 4px,
       rgba(100, 100, 100, 0.3) 4px,
-      rgba(100, 100, 100, 0.3) 8px
-    ),
-    repeating-linear-gradient(
-      -45deg,
+      rgba(100, 100, 100, 0.3) 8px),
+    repeating-linear-gradient(-45deg,
       transparent,
       transparent 4px,
       rgba(100, 100, 100, 0.3) 4px,
-      rgba(100, 100, 100, 0.3) 8px
-    ),
+      rgba(100, 100, 100, 0.3) 8px),
     #000;
 }
 
@@ -1818,8 +1814,15 @@ body {
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
 }
 
 .region-editor-canvas-wrapper {
@@ -2964,8 +2967,15 @@ body {
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
 }
 
 .perf-bottlenecks {
