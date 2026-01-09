@@ -1143,6 +1143,56 @@ const api = {
       ipcRenderer.invoke('inputEvents:getCount', recordingId),
     delete: (recordingId: string): Promise<number> =>
       ipcRenderer.invoke('inputEvents:delete', recordingId)
+  },
+
+  // Input Privacy Configuration
+  privacy: {
+    getConfig: (): Promise<{
+      enabled: boolean;
+      keyboardMode: 'full' | 'masked' | 'none';
+      filterSensitiveApps: boolean;
+      filterPasswordFields: boolean;
+      maskPotentialPasswords: boolean;
+      excludeApps: string[];
+      sensitiveAppPatterns: string[];
+      trustedApps: string[];
+      redactAfterCapture: boolean;
+    }> =>
+      ipcRenderer.invoke('privacy:getConfig'),
+    setConfig: (config: Partial<{
+      enabled: boolean;
+      keyboardMode: 'full' | 'masked' | 'none';
+      filterSensitiveApps: boolean;
+      filterPasswordFields: boolean;
+      maskPotentialPasswords: boolean;
+      excludeApps: string[];
+      sensitiveAppPatterns: string[];
+      trustedApps: string[];
+      redactAfterCapture: boolean;
+    }>): Promise<{
+      enabled: boolean;
+      keyboardMode: 'full' | 'masked' | 'none';
+      filterSensitiveApps: boolean;
+      filterPasswordFields: boolean;
+      maskPotentialPasswords: boolean;
+      excludeApps: string[];
+      sensitiveAppPatterns: string[];
+      trustedApps: string[];
+      redactAfterCapture: boolean;
+    }> =>
+      ipcRenderer.invoke('privacy:setConfig', config),
+    addSensitiveApp: (pattern: string): Promise<boolean> =>
+      ipcRenderer.invoke('privacy:addSensitiveApp', pattern),
+    addTrustedApp: (pattern: string): Promise<boolean> =>
+      ipcRenderer.invoke('privacy:addTrustedApp', pattern),
+    addExcludedApp: (pattern: string): Promise<boolean> =>
+      ipcRenderer.invoke('privacy:addExcludedApp', pattern),
+    getDecision: (): Promise<{
+      shouldCapture: boolean;
+      shouldMaskKeyboard: boolean;
+      reason?: string;
+    }> =>
+      ipcRenderer.invoke('privacy:getDecision')
   }
 };
 
