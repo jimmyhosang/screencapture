@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import RedactionSettings from './RedactionSettings';
+import CcaasSettings from './CcaasSettings';
 
 interface AppSettings {
   theme: 'light' | 'dark' | 'system';
@@ -141,6 +142,8 @@ function Settings(): JSX.Element {
         </div>
 
         <RedactionSettings />
+
+        <CcaasSettings />
 
         <div className="settings-section">
           <h3>About</h3>

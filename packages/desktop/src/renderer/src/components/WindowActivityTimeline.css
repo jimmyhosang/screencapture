@@ -1,0 +1,165 @@
+/**
+ * Window Activity Timeline Styles
+ */
+
+.window-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.window-timeline.loading,
+.window-timeline.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60px;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+/* Timeline Bar */
+.timeline-bar {
+  position: relative;
+  height: 24px;
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.timeline-bar:hover {
+  box-shadow: 0 0 0 2px var(--accent-transparent);
+}
+
+/* Timeline Segments */
+.timeline-segment {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  transition: opacity 0.15s ease;
+  cursor: pointer;
+}
+
+.timeline-segment:hover {
+  opacity: 0.85;
+  z-index: 1;
+}
+
+/* Current Position Marker */
+.current-position {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  background: white;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+  z-index: 10;
+  pointer-events: none;
+  transition: left 0.1s linear;
+}
+
+.current-position::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  width: 10px;
+  height: 10px;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Tooltip */
+.timeline-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  min-width: 150px;
+  max-width: 250px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  pointer-events: none;
+}
+
+.tooltip-app {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.tooltip-title {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 4px;
+}
+
+.tooltip-time {
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Legend */
+.timeline-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding-top: 4px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.legend-item.more {
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.legend-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100px;
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .timeline-tooltip {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+
+  .current-position {
+    background: #fff;
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.5);
+  }
+
+  .current-position::before {
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.3);
+  }
+}

@@ -9,6 +9,7 @@ import { ipcMain } from 'electron';
 import { getWebhookServer, resetWebhookServer } from './webhook-server';
 import { getCallStateManager, resetCallStateManager } from './call-state';
 import { getCallSummary } from './event-handlers';
+import { setupCCaaSRepositoryHandlers as setupRepositoryHandlers } from './repositories';
 import type {
   CCaaSWebhookConfig,
   CCaaSServerStatus,
@@ -19,6 +20,18 @@ export { getWebhookServer, resetWebhookServer } from './webhook-server';
 export { getCallStateManager, resetCallStateManager } from './call-state';
 export { handleCCaaSEvent, getCallSummary } from './event-handlers';
 export * from './types';
+export {
+  CallEventRepository,
+  ActiveWindowRepository,
+  RecordingCallRepository,
+  getCallEventRepository,
+  getActiveWindowRepository,
+  getRecordingCallRepository,
+  setupCCaaSRepositoryHandlers,
+  type CallEvent,
+  type ActiveWindowLog,
+  type RecordingCallMetadata
+} from './repositories';
 
 /**
  * Setup IPC handlers for CCaaS integration
@@ -75,6 +88,9 @@ export function setupCCaaSHandlers(): void {
     const callStateManager = getCallStateManager();
     return callStateManager.getActiveCalls();
   });
+
+  // Setup repository handlers (call events, window logs, recording-call association)
+  setupRepositoryHandlers();
 
   console.log('[CCaaS] IPC handlers registered');
 }

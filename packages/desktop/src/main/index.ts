@@ -9,6 +9,7 @@ import { setupRedactionHandlers } from './redaction';
 import { setupPerformanceHandlers } from './performance';
 import { setupTaskHandlers } from './workers/taskManager';
 import { setupCCaaSHandlers, initCCaaS, cleanupCCaaS } from './ccaas';
+import { setupTrackingHandlers, cleanupTracking } from './tracking';
 import {
   setupRecordingManagerHandlers,
   shutdownRecordingManager,
@@ -463,6 +464,7 @@ app.whenReady().then(() => {
   setupPerformanceHandlers();
   setupTaskHandlers();
   setupCCaaSHandlers();
+  setupTrackingHandlers();
   setupRecordingManagerHandlers();
   setupStorageHandlers();
   setupIndexerHandlers();
@@ -491,6 +493,7 @@ app.on('window-all-closed', () => {
 app.on('before-quit', async () => {
   app.isQuitting = true;
   globalShortcut.unregisterAll();
+  cleanupTracking();
   await shutdownRecordingManager();
   shutdownStorageManager();
   shutdownRecordingIndexer();

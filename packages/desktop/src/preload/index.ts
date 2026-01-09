@@ -470,6 +470,175 @@ const api = {
     }
   },
 
+  // Call Events (CCaaS event history)
+  calls: {
+    getEvents: (callId: string): Promise<Array<{
+      id: string;
+      callId: string;
+      eventType: string;
+      agentId?: string;
+      customerId?: string;
+      queueName?: string;
+      direction?: 'inbound' | 'outbound';
+      disposition?: string;
+      durationSeconds?: number;
+      timestamp: number;
+      payload?: Record<string, unknown>;
+      createdAt: number;
+    }>> =>
+      ipcRenderer.invoke('calls:getEvents', callId),
+    getRecent: (limit?: number): Promise<Array<{
+      id: string;
+      callId: string;
+      eventType: string;
+      agentId?: string;
+      timestamp: number;
+      createdAt: number;
+    }>> =>
+      ipcRenderer.invoke('calls:getRecent', limit),
+    getEventsByAgent: (agentId: string, limit?: number): Promise<Array<{
+      id: string;
+      callId: string;
+      eventType: string;
+      agentId?: string;
+      timestamp: number;
+    }>> =>
+      ipcRenderer.invoke('calls:getEventsByAgent', agentId, limit),
+    getEventsInRange: (startTime: number, endTime: number): Promise<Array<{
+      id: string;
+      callId: string;
+      eventType: string;
+      timestamp: number;
+    }>> =>
+      ipcRenderer.invoke('calls:getEventsInRange', startTime, endTime),
+    getUniqueCallIds: (limit?: number): Promise<string[]> =>
+      ipcRenderer.invoke('calls:getUniqueCallIds', limit)
+  },
+
+  // Active Window Tracking
+  tracking: {
+    // Tracking control
+    start: (recordingId: string): Promise<boolean> =>
+      ipcRenderer.invoke('tracking:start', recordingId),
+    stop: (): Promise<Array<{
+      timestampMs: number;
+      windowTitle?: string;
+      processName?: string;
+      url?: string;
+    }>> =>
+      ipcRenderer.invoke('tracking:stop'),
+    pause: (): Promise<boolean> =>
+      ipcRenderer.invoke('tracking:pause'),
+    resume: (): Promise<boolean> =>
+      ipcRenderer.invoke('tracking:resume'),
+    isActive: (): Promise<boolean> =>
+      ipcRenderer.invoke('tracking:isActive'),
+    getCurrentLogs: (): Promise<Array<{
+      timestampMs: number;
+      windowTitle?: string;
+      processName?: string;
+      url?: string;
+    }>> =>
+      ipcRenderer.invoke('tracking:getCurrentLogs'),
+    getConfig: (): Promise<{
+      pollIntervalMs: number;
+      extractBrowserUrl: boolean;
+      includeWindowBounds: boolean;
+    }> =>
+      ipcRenderer.invoke('tracking:getConfig'),
+    setConfig: (config: Partial<{
+      pollIntervalMs: number;
+      extractBrowserUrl: boolean;
+      includeWindowBounds: boolean;
+    }>): Promise<{
+      pollIntervalMs: number;
+      extractBrowserUrl: boolean;
+      includeWindowBounds: boolean;
+    }> =>
+      ipcRenderer.invoke('tracking:setConfig', config),
+    // Database queries (from repositories)
+    getWindowLog: (recordingId: string): Promise<Array<{
+      id: string;
+      recordingId: string;
+      timestampMs: number;
+      windowTitle?: string;
+      processName?: string;
+      url?: string;
+    }>> =>
+      ipcRenderer.invoke('tracking:getWindowLog', recordingId),
+    getWindowAtTimestamp: (recordingId: string, timestampMs: number): Promise<{
+      id: string;
+      recordingId: string;
+      timestampMs: number;
+      windowTitle?: string;
+      processName?: string;
+      url?: string;
+    } | null> =>
+      ipcRenderer.invoke('tracking:getWindowAtTimestamp', recordingId, timestampMs),
+    getUniqueProcesses: (recordingId: string): Promise<string[]> =>
+      ipcRenderer.invoke('tracking:getUniqueProcesses', recordingId),
+    getActivitySummary: (recordingId: string): Promise<Array<{
+      processName: string;
+      totalTimeMs: number;
+      percentage: number;
+    }>> =>
+      ipcRenderer.invoke('tracking:getActivitySummary', recordingId),
+    // Event listener for window changes
+    onWindowChange: (callback: (data: {
+      recordingId: string;
+      timestampMs: number;
+      windowTitle?: string;
+      processName?: string;
+      url?: string;
+    }) => void): void => {
+      ipcRenderer.on('tracking:windowChange', (_, data) => callback(data));
+    },
+    removeWindowChangeListener: (): void => {
+      ipcRenderer.removeAllListeners('tracking:windowChange');
+    }
+  },
+
+  // Recording-Call Association
+  recordingCalls: {
+    getByCallId: (callId: string): Promise<Array<{
+      id: string;
+      filename: string;
+      callId: string;
+      agentId?: string;
+      queueName?: string;
+      callDirection?: string;
+      startTime: number;
+      duration: number;
+    }>> =>
+      ipcRenderer.invoke('recordings:getByCallId', callId),
+    getByRecordingId: (recordingId: string): Promise<{
+      recordingId: string;
+      callId: string;
+      agentId?: string;
+      queueName?: string;
+      callDirection?: string;
+    } | null> =>
+      ipcRenderer.invoke('recordings:getCallMetadata', recordingId),
+    updateCallMetadata: (recordingId: string, metadata: {
+      callId?: string;
+      agentId?: string;
+      queueName?: string;
+      callDirection?: 'inbound' | 'outbound';
+    }): Promise<boolean> =>
+      ipcRenderer.invoke('recordings:updateCallMetadata', recordingId, metadata),
+    getWithCalls: (limit?: number): Promise<Array<{
+      id: string;
+      filename: string;
+      callId?: string;
+      agentId?: string;
+      queueName?: string;
+      callDirection?: string;
+      startTime: number;
+      duration: number;
+    }>> =>
+      ipcRenderer.invoke('recordings:getWithCalls', limit)
+  },
+
   // Recording Manager (screen capture with desktopCapturer)
   recordingManager: {
     getSources: (): Promise<SourceInfo[]> =>

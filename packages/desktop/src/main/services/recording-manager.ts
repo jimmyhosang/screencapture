@@ -17,6 +17,7 @@ import {
   RecordingState
 } from './screen-recorder';
 import { getCallStateManager } from '../ccaas/call-state';
+import { getActiveWindowTracker } from '../tracking';
 import { getDatabase, getRecordingsPath } from '../database';
 import type { VideoRecording } from '../types';
 
@@ -131,6 +132,10 @@ export class RecordingManager {
       const callStateManager = getCallStateManager();
       callStateManager.setRecordingSession(callId, recordingId);
 
+      // Start window tracking for this recording
+      const windowTracker = getActiveWindowTracker();
+      windowTracker.start(recordingId);
+
       console.log(`[RecordingManager] Started recording ${recordingId} for call ${callId}`);
 
       return recordingId;
@@ -171,6 +176,12 @@ export class RecordingManager {
     managed.status = 'stopping';
 
     try {
+      // Stop window tracking and save logs
+      const windowTracker = getActiveWindowTracker();
+      if (windowTracker.isTracking() && windowTracker.getRecordingId() === recordingId) {
+        windowTracker.stop(); // This saves to database automatically
+      }
+
       const recorder = getScreenRecorder();
       const result = await recorder.stopRecording(recordingId);
 
