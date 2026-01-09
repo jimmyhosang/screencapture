@@ -21,7 +21,8 @@ import {
   setupOcrProcessorHandlers,
   shutdownOcrProcessor,
   setupSessionRecordingManagerHandlers,
-  shutdownSessionRecordingManager
+  shutdownSessionRecordingManager,
+  setupInputEventsHandlers
 } from './services';
 import type { SessionRecord, SessionStats, AppSettings } from './types';
 
@@ -474,6 +475,7 @@ app.whenReady().then(() => {
   setupIndexerHandlers();
   setupOcrProcessorHandlers();
   setupSessionRecordingManagerHandlers();
+  setupInputEventsHandlers();
   setupKeyboardShortcuts();
 
   // Create window and tray

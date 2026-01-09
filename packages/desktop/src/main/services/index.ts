@@ -70,3 +70,13 @@ export {
   type SessionProgressData,
   type SessionEventType
 } from './session-recording-manager';
+
+export {
+  InputEventsRepository,
+  getInputEventsRepository,
+  resetInputEventsRepository,
+  setupInputEventsHandlers,
+  type StoredInputEvent,
+  type InputEventSummary,
+  type InputEventFilter
+} from './input-events-repository';

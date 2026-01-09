@@ -1074,6 +1074,75 @@ const api = {
       ipcRenderer.removeAllListeners('sessionManager:session:error');
       ipcRenderer.removeAllListeners('sessionManager:session:progress');
     }
+  },
+
+  // Input Events Database (persistent storage)
+  inputEvents: {
+    save: (recordingId: string, events: Array<{
+      timestamp: number;
+      type: string;
+      x?: number;
+      y?: number;
+      button?: number;
+      keycode?: number;
+      key?: string;
+      modifiers?: { ctrl: boolean; alt: boolean; shift: boolean; meta: boolean };
+      scrollDelta?: { x: number; y: number };
+      duration?: number;
+    }>): Promise<number> =>
+      ipcRenderer.invoke('inputEvents:save', recordingId, events),
+    get: (recordingId: string, options?: {
+      limit?: number;
+      offset?: number;
+      types?: string[];
+    }): Promise<Array<{
+      id: number;
+      recordingId: string;
+      timestampMs: number;
+      eventType: string;
+      x?: number;
+      y?: number;
+      button?: number;
+      keycode?: number;
+      keyName?: string;
+      scrollDeltaX?: number;
+      scrollDeltaY?: number;
+      durationMs?: number;
+      modifiers?: { ctrl: boolean; alt: boolean; shift: boolean; meta: boolean };
+    }>> =>
+      ipcRenderer.invoke('inputEvents:get', recordingId, options),
+    getInRange: (recordingId: string, startMs: number, endMs: number): Promise<Array<{
+      id: number;
+      recordingId: string;
+      timestampMs: number;
+      eventType: string;
+      x?: number;
+      y?: number;
+      button?: number;
+      keycode?: number;
+      keyName?: string;
+      scrollDeltaX?: number;
+      scrollDeltaY?: number;
+      durationMs?: number;
+      modifiers?: { ctrl: boolean; alt: boolean; shift: boolean; meta: boolean };
+    }>> =>
+      ipcRenderer.invoke('inputEvents:getInRange', recordingId, startMs, endMs),
+    getSummary: (recordingId: string): Promise<{
+      recordingId: string;
+      totalEvents: number;
+      clickCount: number;
+      keystrokeCount: number;
+      scrollCount: number;
+      mouseMoveCount: number;
+      firstEventMs: number | null;
+      lastEventMs: number | null;
+      createdAt: number;
+    } | null> =>
+      ipcRenderer.invoke('inputEvents:getSummary', recordingId),
+    getCount: (recordingId: string): Promise<number> =>
+      ipcRenderer.invoke('inputEvents:getCount', recordingId),
+    delete: (recordingId: string): Promise<number> =>
+      ipcRenderer.invoke('inputEvents:delete', recordingId)
   }
 };
 

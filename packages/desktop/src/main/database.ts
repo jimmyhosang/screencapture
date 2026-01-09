@@ -6,7 +6,7 @@ import { existsSync, mkdirSync } from 'fs';
 let db: Database.Database | null = null;
 
 // Schema version for migrations
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 export function initDatabase(): void {
   const userDataPath = app.getPath('userData');
@@ -124,6 +124,80 @@ function runMigrations(): void {
       -- Add indexes for CCaaS columns
       CREATE INDEX IF NOT EXISTS idx_recordings_call_id ON recordings(call_id);
       CREATE INDEX IF NOT EXISTS idx_recordings_agent_id ON recordings(agent_id);
+    `);
+  }
+
+  if (currentVersion < 3) {
+    // Input events and session recordings schema (v3)
+    db.exec(`
+      -- Input events table for mouse, keyboard, scroll events
+      CREATE TABLE IF NOT EXISTS input_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        recording_id TEXT NOT NULL,
+        timestamp_ms INTEGER NOT NULL,
+        event_type TEXT NOT NULL,
+        x INTEGER,
+        y INTEGER,
+        button INTEGER,
+        keycode INTEGER,
+        key_name TEXT,
+        scroll_delta_x INTEGER,
+        scroll_delta_y INTEGER,
+        duration_ms INTEGER,
+        modifiers TEXT,
+        FOREIGN KEY (recording_id) REFERENCES recordings(id) ON DELETE CASCADE
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_input_events_recording_id ON input_events(recording_id);
+      CREATE INDEX IF NOT EXISTS idx_input_events_timestamp ON input_events(timestamp_ms);
+      CREATE INDEX IF NOT EXISTS idx_input_events_type ON input_events(event_type);
+
+      -- Session recordings table for unified recording sessions
+      CREATE TABLE IF NOT EXISTS session_recordings (
+        id TEXT PRIMARY KEY,
+        recording_id TEXT,
+        video_path TEXT NOT NULL,
+        input_events_path TEXT,
+        window_log_path TEXT,
+        duration_ms INTEGER NOT NULL,
+        file_size INTEGER NOT NULL,
+        resolution_width INTEGER NOT NULL,
+        resolution_height INTEGER NOT NULL,
+        frame_rate INTEGER,
+        quality TEXT,
+        input_event_count INTEGER DEFAULT 0,
+        window_change_count INTEGER DEFAULT 0,
+        call_id TEXT,
+        agent_id TEXT,
+        metadata TEXT,
+        status TEXT NOT NULL DEFAULT 'ready',
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        FOREIGN KEY (recording_id) REFERENCES recordings(id) ON DELETE SET NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_session_recordings_created_at ON session_recordings(created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_session_recordings_status ON session_recordings(status);
+      CREATE INDEX IF NOT EXISTS idx_session_recordings_call_id ON session_recordings(call_id);
+
+      -- Input event summary for quick stats (aggregated per recording)
+      CREATE TABLE IF NOT EXISTS input_event_summary (
+        recording_id TEXT PRIMARY KEY,
+        total_events INTEGER DEFAULT 0,
+        click_count INTEGER DEFAULT 0,
+        keystroke_count INTEGER DEFAULT 0,
+        scroll_count INTEGER DEFAULT 0,
+        mouse_move_count INTEGER DEFAULT 0,
+        first_event_ms INTEGER,
+        last_event_ms INTEGER,
+        created_at INTEGER NOT NULL,
+        FOREIGN KEY (recording_id) REFERENCES recordings(id) ON DELETE CASCADE
+      );
+
+      -- Add input tracking columns to recordings
+      ALTER TABLE recordings ADD COLUMN input_events_path TEXT;
+      ALTER TABLE recordings ADD COLUMN input_event_count INTEGER DEFAULT 0;
+      ALTER TABLE recordings ADD COLUMN has_input_tracking INTEGER DEFAULT 0;
     `);
   }
 
