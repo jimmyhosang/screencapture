@@ -958,6 +958,122 @@ const api = {
       duration?: number;
     }>> =>
       ipcRenderer.invoke('input:loadEvents', videoPath)
+  },
+
+  // Session Recording Manager (unified orchestration)
+  sessionManager: {
+    getSources: (): Promise<Array<{
+      id: string;
+      name: string;
+      thumbnail: string;
+      isScreen: boolean;
+      isWindow: boolean;
+    }>> =>
+      ipcRenderer.invoke('sessionManager:getSources'),
+    start: (sourceId: string, config?: {
+      quality?: 'low' | 'medium' | 'high' | 'ultra';
+      resolution?: { width: number; height: number };
+      frameRate?: number;
+      captureInputs?: boolean;
+      inputConfig?: {
+        mouseMoveThrottleMs?: number;
+        scrollThrottleMs?: number;
+        keyboardMode?: 'full' | 'masked' | 'none';
+        captureMouseClicks?: boolean;
+        captureMouseMove?: boolean;
+        captureKeyboard?: boolean;
+        captureScroll?: boolean;
+      };
+      captureWindowActivity?: boolean;
+      windowPollingInterval?: number;
+      enablePrivacyFilter?: boolean;
+      keyboardMode?: 'full' | 'masked' | 'none';
+      metadata?: Record<string, unknown>;
+      callId?: string;
+      agentId?: string;
+    }): Promise<string> =>
+      ipcRenderer.invoke('sessionManager:start', sourceId, config),
+    stop: (sessionId: string): Promise<{
+      sessionId: string;
+      videoPath: string;
+      inputEventsPath: string | null;
+      windowLogPath: string | null;
+      duration: number;
+      fileSize: number;
+      inputEventCount: number;
+      windowChangeCount: number;
+      resolution: { width: number; height: number };
+      metadata?: Record<string, unknown>;
+    }> =>
+      ipcRenderer.invoke('sessionManager:stop', sessionId),
+    pause: (sessionId: string): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke('sessionManager:pause', sessionId),
+    resume: (sessionId: string): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke('sessionManager:resume', sessionId),
+    getSession: (sessionId: string): Promise<{
+      sessionId: string;
+      status: 'starting' | 'recording' | 'paused' | 'stopping' | 'stopped' | 'error';
+      startTime: number;
+      pausedTime: number;
+      sourceId: string;
+      sourceName: string;
+      config: Record<string, unknown>;
+      captureSessionId: string | null;
+      inputEventCount: number;
+      windowChangeCount: number;
+      errorMessage?: string;
+    } | null> =>
+      ipcRenderer.invoke('sessionManager:getSession', sessionId),
+    getActive: (): Promise<Array<{
+      sessionId: string;
+      status: string;
+      startTime: number;
+      sourceId: string;
+      sourceName: string;
+    }>> =>
+      ipcRenderer.invoke('sessionManager:getActive'),
+    isRecording: (): Promise<boolean> =>
+      ipcRenderer.invoke('sessionManager:isRecording'),
+    // Event listeners
+    onStarting: (callback: (data: { sessionId: string }) => void): void => {
+      ipcRenderer.on('sessionManager:session:starting', (_, data) => callback(data));
+    },
+    onStarted: (callback: (data: { sessionId: string; sourceId: string; sourceName: string }) => void): void => {
+      ipcRenderer.on('sessionManager:session:started', (_, data) => callback(data));
+    },
+    onPaused: (callback: (data: { sessionId: string }) => void): void => {
+      ipcRenderer.on('sessionManager:session:paused', (_, data) => callback(data));
+    },
+    onResumed: (callback: (data: { sessionId: string }) => void): void => {
+      ipcRenderer.on('sessionManager:session:resumed', (_, data) => callback(data));
+    },
+    onStopping: (callback: (data: { sessionId: string }) => void): void => {
+      ipcRenderer.on('sessionManager:session:stopping', (_, data) => callback(data));
+    },
+    onStopped: (callback: (data: { sessionId: string; result: Record<string, unknown> }) => void): void => {
+      ipcRenderer.on('sessionManager:session:stopped', (_, data) => callback(data));
+    },
+    onError: (callback: (data: { sessionId: string; error: string }) => void): void => {
+      ipcRenderer.on('sessionManager:session:error', (_, data) => callback(data));
+    },
+    onProgress: (callback: (data: {
+      sessionId: string;
+      duration: number;
+      inputEventCount: number;
+      windowChangeCount: number;
+    }) => void): void => {
+      ipcRenderer.on('sessionManager:session:progress', (_, data) => callback(data));
+    },
+    removeAllListeners: (): void => {
+      ipcRenderer.removeAllListeners('sessionManager:session:starting');
+      ipcRenderer.removeAllListeners('sessionManager:session:started');
+      ipcRenderer.removeAllListeners('sessionManager:session:paused');
+      ipcRenderer.removeAllListeners('sessionManager:session:resumed');
+      ipcRenderer.removeAllListeners('sessionManager:session:stopping');
+      ipcRenderer.removeAllListeners('sessionManager:session:stopped');
+      ipcRenderer.removeAllListeners('sessionManager:session:error');
+      ipcRenderer.removeAllListeners('sessionManager:session:progress');
+    }
   }
 };
 

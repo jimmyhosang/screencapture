@@ -58,3 +58,15 @@ export {
   type WordInfo,
   type Rectangle
 } from './ocr-processor';
+
+export {
+  SessionRecordingManager,
+  getSessionRecordingManager,
+  setupSessionRecordingManagerHandlers,
+  shutdownSessionRecordingManager,
+  type SessionRecordingConfig,
+  type SessionRecordingState,
+  type SessionRecordingResult,
+  type SessionProgressData,
+  type SessionEventType
+} from './session-recording-manager';

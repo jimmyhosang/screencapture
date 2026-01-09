@@ -19,7 +19,9 @@ import {
   setupIndexerHandlers,
   shutdownRecordingIndexer,
   setupOcrProcessorHandlers,
-  shutdownOcrProcessor
+  shutdownOcrProcessor,
+  setupSessionRecordingManagerHandlers,
+  shutdownSessionRecordingManager
 } from './services';
 import type { SessionRecord, SessionStats, AppSettings } from './types';
 
@@ -471,15 +473,17 @@ app.whenReady().then(() => {
   setupStorageHandlers();
   setupIndexerHandlers();
   setupOcrProcessorHandlers();
+  setupSessionRecordingManagerHandlers();
   setupKeyboardShortcuts();
 
   // Create window and tray
   createWindow();
   createTray();
 
-  // Set main window reference for capture module
+  // Set main window reference for capture module and session manager
   if (mainWindow) {
     updateCaptureMainWindow(mainWindow);
+    setupSessionRecordingManagerHandlers(mainWindow);
   }
 
   app.on('activate', function () {
@@ -501,6 +505,7 @@ app.on('before-quit', async () => {
   app.isQuitting = true;
   globalShortcut.unregisterAll();
   cleanupTracking();
+  await shutdownSessionRecordingManager();
   await cleanupCapture();
   await shutdownRecordingManager();
   shutdownStorageManager();
