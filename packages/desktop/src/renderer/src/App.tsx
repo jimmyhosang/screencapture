@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Dashboard from './components/Dashboard';
 import SessionList from './components/SessionList';
 import PlayerModal from './components/PlayerModal';
+import VideoPlayerModal from './components/VideoPlayerModal';
 import Settings from './components/Settings';
 import RecordingControls from './components/RecordingControls';
 import DesktopCaptureControls from './components/DesktopCaptureControls';
@@ -44,6 +45,7 @@ function App(): JSX.Element {
   const [stats, setStats] = useState<Stats | null>(null);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [playingSession, setPlayingSession] = useState<Session | null>(null);
+  const [playingVideo, setPlayingVideo] = useState<{ filePath: string; title: string } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showOCRTest, setShowOCRTest] = useState(false);
 
@@ -166,12 +168,11 @@ function App(): JSX.Element {
 
   const handlePlay = async (session: Session) => {
     if (session.isDesktopRecording && session.filePath) {
-      // For desktop recordings, open the video file with system player
-      if (window.api?.shell?.openPath) {
-        await window.api.shell.openPath(session.filePath);
-      } else {
-        console.error('Cannot open video file - shell.openPath not available');
-      }
+      // For desktop recordings, use in-app video player
+      setPlayingVideo({
+        filePath: session.filePath,
+        title: session.name
+      });
       return;
     }
 
@@ -316,11 +317,20 @@ function App(): JSX.Element {
         {view === 'settings' && <Settings />}
       </div>
 
-      {/* Player modal */}
+      {/* Player modal for URL recordings */}
       {playingSession && playingSession.events && (
         <PlayerModal
           session={playingSession}
           onClose={() => setPlayingSession(null)}
+        />
+      )}
+
+      {/* Video player modal for desktop recordings */}
+      {playingVideo && (
+        <VideoPlayerModal
+          filePath={playingVideo.filePath}
+          title={playingVideo.title}
+          onClose={() => setPlayingVideo(null)}
         />
       )}
 
