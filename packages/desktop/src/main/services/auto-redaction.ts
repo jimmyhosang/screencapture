@@ -116,7 +116,13 @@ export class AutoRedactionService {
     const startTime = Date.now();
     const fullConfig = { ...currentConfig, ...config };
 
+    console.log(`[AutoRedaction] processVideo called`);
+    console.log(`[AutoRedaction] Config enabled: ${fullConfig.enabled}`);
+    console.log(`[AutoRedaction] Current config:`, JSON.stringify(currentConfig));
+    console.log(`[AutoRedaction] Passed config:`, JSON.stringify(config));
+
     if (!fullConfig.enabled) {
+      console.log(`[AutoRedaction] Skipping - not enabled`);
       return {
         success: true,
         originalPath: videoPath,

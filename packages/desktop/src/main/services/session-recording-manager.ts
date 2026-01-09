@@ -351,7 +351,11 @@ export class SessionRecordingManager extends EventEmitter {
 
       // 6. Apply auto-redaction if enabled
       let redactionInfo: SessionRecordingResult['redaction'];
-      if (isAutoRedactionEnabled() || state.config.autoRedaction?.enabled) {
+      const globalEnabled = isAutoRedactionEnabled();
+      const sessionEnabled = state.config.autoRedaction?.enabled;
+      console.log(`[SessionManager] Auto-redaction check: global=${globalEnabled}, session=${sessionEnabled}`);
+
+      if (globalEnabled || sessionEnabled) {
         try {
           console.log(`[SessionManager] Running auto-redaction on ${captureResult.filePath}`);
           this.notifyRenderer('session:redacting', { sessionId, message: 'Analyzing for PII...' });
