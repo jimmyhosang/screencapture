@@ -35,7 +35,41 @@ A comprehensive screen recording and session replay platform with advanced priva
 - **Privacy Controls**: Mask inputs, block elements, configurable redaction
 - **Session Export**: Save and export recordings as JSON
 
-## Quick Start
+- **[@screencapture/app](./packages/app)** - Full-featured React web application
+- **[@screencapture/extension](./packages/extension)** - Chrome/Firefox browser extension
+
+## ✨ Features
+
+### Recording
+- 🎥 Record complete user sessions (clicks, scrolls, inputs, mutations)
+- 🔒 Privacy controls (mask inputs, block elements, redact PII)
+- ⚡ High-performance recording (events stored in refs, not state)
+- 📊 Configurable sampling rates
+
+### Privacy
+- **Mask All Inputs**: Replace form values with asterisks
+- **Block Sensitive Elements**: Hide `.sensitive` or `.pii` classes
+- **Mask PII Patterns**: Auto-redact emails, phones, SSNs, credit cards
+- **Custom Masking**: Mask 4+ digit sequences
+
+### Session Management
+- 💾 Persistent localStorage storage
+- 📤 Import/Export as JSON
+- 🏷️ Session metadata (name, date, duration, event count)
+- 📊 Storage usage tracking (configurable limits 10-200MB)
+- 🔄 Auto-save or manual save options
+
+### Playback
+- ▶️ Full-screen player (95% viewport)
+- ⏩ Speed controls (1x, 2x, 4x, 8x)
+- ⏯️ Timeline with playback controls
+- 📱 Responsive player sizing
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Node.js 22.12+ (we use v22.21.1)
+- pnpm 10+
 
 ### Desktop App
 

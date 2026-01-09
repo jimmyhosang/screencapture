@@ -4,133 +4,99 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-A full-featured React session recording and replay application built with rrweb. Captures DOM events and user interactions with comprehensive privacy controls, session history management, persistent storage, and import/export capabilities.
+A full-featured session recording and replay system built with rrweb, distributed as both a web application and browser extension. Captures DOM events and user interactions with comprehensive privacy controls, session history management, persistent storage, and import/export capabilities.
+
+## Monorepo Structure
+
+This is a pnpm workspace monorepo with the following packages:
+
+- **`packages/app`** - React web application for recording and replaying sessions
+  - Full-featured UI with session history, settings, and privacy controls
+  - See `packages/app/CLAUDE.md` for detailed app architecture
+
+- **`packages/extension`** - Browser extension (Chrome/Firefox/Edge)
+  - Content script for injecting recording capability into web pages
+  - Popup UI for controlling recordings
+  - Background service worker for message passing
 
 ## Development Commands
 
+### Prerequisites
+- Node.js 22.12+ (currently using v22.21.1)
+- pnpm 10+ (installed globally)
+
+### Installation
 ```bash
-# Install dependencies
-npm install
-
-# Start development server (http://localhost:5173)
-npm run dev
-
-# Build for production
-npm run build
-
-# Preview production build
-npm run preview
-
-# Run linter
-npm run lint
+# Install all dependencies
+pnpm install
 ```
 
-## Architecture
+### Development
+```bash
+# Start web app development server (http://localhost:5173)
+pnpm dev
 
-### Core Components
+# Build extension in watch mode (for development)
+pnpm --filter @screencapture/extension dev
 
-**useRecorder Hook** (`src/hooks/useRecorder.ts`)
-- Custom hook that wraps rrweb's recording API
-- Manages recording state (isRecording, events array)
-- Supports configurable privacy settings passed at recording start
-- Privacy features: input masking, sensitive element blocking, PII pattern redaction, custom masking
-- Stores events in ref during recording to prevent performance issues
-- Returns: `startRecording(config)`, `stopRecording()`, `clearEvents()` functions and current state
+# Run specific package
+pnpm --filter @screencapture/app dev
+pnpm --filter @screencapture/extension dev
+```
 
-**useSessionManager Hook** (`src/hooks/useSessionManager.ts`)
-- Manages session history and localStorage persistence
-- Tracks all saved recordings with metadata (name, timestamp, duration, event count)
-- Provides: save, load, delete, export, import, and storage statistics
-- Auto-save capability based on settings
-- Enforces storage limits and provides storage usage stats
+### Building
+```bash
+# Build everything for production
+pnpm build
 
-**App Component** (`src/App.tsx`)
-- Main application with two-panel layout: session history (left) and recording controls (right)
-- Integrates all hooks and components
-- Handles auto-save vs manual save prompt based on settings
-- Manages privacy configuration UI and recording state
-- Demo elements showcase different interaction types that rrweb can capture
+# Build specific package
+pnpm --filter @screencapture/app build
+pnpm --filter @screencapture/extension build
+```
 
-**SessionHistory Component** (`src/components/SessionHistory.tsx`)
-- Left sidebar displaying all saved recordings
-- Features: play, delete, export per session; import, export all, clear all
-- Shows storage usage with visual progress bar
-- Displays session metadata (name, date, duration, event count, privacy tags)
-- Highlights currently playing session
+### Testing & Linting
+```bash
+# Run all tests
+pnpm test
 
-**Settings Component** (`src/components/Settings.tsx`)
-- Modal for configuring application settings
-- Default privacy settings for new recordings
-- Storage limit configuration (10-200 MB slider)
-- Auto-save toggle
-- Recording quality settings (mouse tracking, scroll sampling interval)
+# Run linters
+pnpm lint
+```
 
-**PlayerModal Component** (`src/components/PlayerModal.tsx`)
-- Full-screen modal wrapper for rrweb-player (95% viewport)
-- Dynamically sized player (90% width × 85% height of window)
-- Creates new rrwebPlayer instance when modal opens
-- Speed controls (1x, 2x, 4x, 8x), autoPlay enabled
-- Cleans up player instance on unmount to prevent memory leaks
-- Plays either current recording or selected session from history
+## Extension Development
 
-### Data Flow
+After building the extension:
 
-**Recording Flow:**
-1. User configures privacy settings (or uses defaults from Settings)
-2. User clicks "Start Recording" → `useRecorder.startRecording(privacyConfig)` → rrweb.record() begins
-3. Events accumulate in `eventsRef` (not state - prevents re-renders)
-4. User clicks "Stop Recording" → `stopRecording()` called → events synced to state
-5. If auto-save enabled: session automatically saved to localStorage
-6. If auto-save disabled: save prompt modal appears, user can name and save or discard
+1. Build the extension: `pnpm --filter @screencapture/extension build`
+2. Open Chrome and navigate to `chrome://extensions/`
+3. Enable "Developer mode" (top right)
+4. Click "Load unpacked"
+5. Select `packages/extension/dist` folder
 
-**Playback Flow:**
-1. User clicks "Play Recording" (current) or clicks play on saved session
-2. Session events loaded (from current recording or localStorage)
-3. PlayerModal opens with events → new rrwebPlayer instance created
-4. Player renders session in full-screen modal with playback controls
+The extension will:
+- Add a browser action icon
+- Inject recording capability into web pages
+- Provide popup UI for controlling recordings
+- Save recordings to chrome.storage
 
-**Storage Flow:**
-- Sessions saved to localStorage under `rrweb_sessions` key
-- Settings saved to localStorage under `rrweb_settings` key
-- Storage limit enforced before save (default 50MB, configurable 10-200MB)
-- Sessions include: id, name, timestamp, duration, eventCount, events array, privacyConfig
+## Package Dependencies
+
+- Both packages share rrweb as a core dependency
+- Extension uses `@types/chrome` for Chrome Extension APIs
+- App uses React, Vite, and rrweb-player for UI
 
 ## Key Technologies
 
-- **rrweb**: Records and replays sessions by serializing DOM mutations and user interactions
-- **rrweb-player**: Pre-built player component with timeline, speed controls, and playback controls
-- **React 19**: Latest React with new features (no React Compiler enabled)
-- **Vite**: Build tool with HMR (Hot Module Replacement)
-- **TypeScript**: Strict type checking enabled via tsconfig files
-
-## Key Features
-
-### Privacy Controls
-- **Mask All Inputs**: Replaces input values with asterisks during recording
-- **Block Sensitive Elements**: Hides elements with `.sensitive` or `.pii` CSS classes
-- **Mask PII Patterns**: Auto-redacts emails, phones, SSNs, credit cards using regex
-- **Custom Mask Function**: Masks any sequence of 4+ digits
-- Privacy settings can be configured per-recording or set as defaults in Settings
-
-### Session Management
-- **Persistent Storage**: All recordings saved to browser localStorage
-- **Session Metadata**: Name, timestamp, duration, event count, privacy config
-- **Storage Stats**: Real-time usage display with configurable limits
-- **Auto-Save**: Optional automatic saving when recording stops
-- **Import/Export**: Download sessions as JSON files, import previously saved sessions
-- **Batch Operations**: Export all sessions, clear all sessions
-
-### Performance Optimizations
-- Events stored in ref during recording (not state) to prevent hundreds of re-renders per second
-- Only sync events to state when recording stops
-- Configurable sampling rates for mouse/scroll events
+- **pnpm workspaces**: Monorepo management
+- **rrweb**: Session recording and replay
+- **React 19**: UI framework (app only)
+- **Vite**: Build tool for both packages
+- **TypeScript**: Type safety across all packages
+- **vite-plugin-web-extension**: Extension build plugin
 
 ## Important Notes
 
-- rrweb events are of type `eventWithTime` from `@rrweb/types`
-- The first event is always a full DOM snapshot (Meta event), subsequent events are incremental mutations
-- Sessions are stored in browser localStorage - clearing browser data will delete all recordings
-- Large recordings can consume significant storage - monitor usage in SessionHistory panel
-- Privacy masking happens during recording, not playback - cannot be changed retroactively
-- Default privacy config loaded from Settings when app starts
-- Player dynamically sizes to window dimensions for full-screen experience
+- Use `pnpm` not `npm` for all package management
+- Extension manifest is v3 (modern Chrome extensions)
+- Both packages can share code if needed via workspace protocol
+- Extension needs placeholder icons before loading (see `packages/extension/public/icons/README.md`)
