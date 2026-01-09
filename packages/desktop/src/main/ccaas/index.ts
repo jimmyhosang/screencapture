@@ -20,6 +20,7 @@ export { getWebhookServer, resetWebhookServer } from './webhook-server';
 export { getCallStateManager, resetCallStateManager } from './call-state';
 export { handleCCaaSEvent, getCallSummary } from './event-handlers';
 export * from './types';
+export * from './errors';
 export {
   CallEventRepository,
   ActiveWindowRepository,
