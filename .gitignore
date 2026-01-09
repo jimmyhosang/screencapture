@@ -22,3 +22,20 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Recordings and media files (security - never commit recordings)
+*.webm
+*.mp4
+*.mov
+*.avi
+*.mkv
+recordings/
+**/recordings/
+**/*_chunks/
+*.sqlite
+*.sqlite3
+
+# Thumbnails and temp files
+thumbnails/
+temp/
+exports/
