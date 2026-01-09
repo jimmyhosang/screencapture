@@ -4,9 +4,11 @@ import SessionList from './components/SessionList';
 import PlayerModal from './components/PlayerModal';
 import Settings from './components/Settings';
 import RecordingControls from './components/RecordingControls';
+import DesktopCaptureControls from './components/DesktopCaptureControls';
 import OCRTestMode from './components/OCRTestMode';
 
 type View = 'dashboard' | 'settings' | 'record';
+type RecordMode = 'url' | 'desktop';
 
 interface Session {
   id: string;
@@ -31,6 +33,7 @@ interface Stats {
 
 function App(): JSX.Element {
   const [view, setView] = useState<View>('dashboard');
+  const [recordMode, setRecordMode] = useState<RecordMode>('desktop');
   const [sessions, setSessions] = useState<Session[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
@@ -181,28 +184,61 @@ function App(): JSX.Element {
           />
         )}
         {view === 'record' && (
-          <RecordingControls
-            onRecordingComplete={async (events, duration, privacyConfig) => {
-              // Save the recording as a new session
-              const session = {
-                id: crypto.randomUUID(),
-                name: `Recording ${new Date().toLocaleString()}`,
-                timestamp: Date.now(),
-                duration,
-                eventCount: events.length,
-                events,
-                privacyConfig: {
-                  maskInputs: privacyConfig.maskAllInputs,
-                  blockSensitive: privacyConfig.blockSensitive,
-                  maskPiiPatterns: privacyConfig.maskPiiPatterns
-                }
-              };
-              await window.api.sessions.save(session);
-              loadSessions();
-              loadStats();
-              setView('dashboard');
-            }}
-          />
+          <div className="record-view">
+            {/* Record Mode Tabs */}
+            <div className="record-mode-tabs">
+              <button
+                className={`mode-tab ${recordMode === 'desktop' ? 'active' : ''}`}
+                onClick={() => setRecordMode('desktop')}
+              >
+                🖥️ Desktop Capture
+              </button>
+              <button
+                className={`mode-tab ${recordMode === 'url' ? 'active' : ''}`}
+                onClick={() => setRecordMode('url')}
+              >
+                🌐 URL Recording
+              </button>
+            </div>
+
+            {/* Desktop Capture Mode */}
+            {recordMode === 'desktop' && (
+              <DesktopCaptureControls
+                onRecordingComplete={async (result) => {
+                  // Reload sessions after desktop capture
+                  loadSessions();
+                  loadStats();
+                  setView('dashboard');
+                }}
+              />
+            )}
+
+            {/* URL Recording Mode */}
+            {recordMode === 'url' && (
+              <RecordingControls
+                onRecordingComplete={async (events, duration, privacyConfig) => {
+                  // Save the recording as a new session
+                  const session = {
+                    id: crypto.randomUUID(),
+                    name: `Recording ${new Date().toLocaleString()}`,
+                    timestamp: Date.now(),
+                    duration,
+                    eventCount: events.length,
+                    events,
+                    privacyConfig: {
+                      maskInputs: privacyConfig.maskAllInputs,
+                      blockSensitive: privacyConfig.blockSensitive,
+                      maskPiiPatterns: privacyConfig.maskPiiPatterns
+                    }
+                  };
+                  await window.api.sessions.save(session);
+                  loadSessions();
+                  loadStats();
+                  setView('dashboard');
+                }}
+              />
+            )}
+          </div>
         )}
         {view === 'settings' && <Settings />}
       </div>

@@ -1,0 +1,358 @@
+.desktop-capture-controls {
+  padding: 24px;
+  max-width: 800px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.desktop-capture-controls h2 {
+  margin-bottom: 20px;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-primary, #e8e8e8);
+}
+
+.desktop-capture-controls h3 {
+  margin-bottom: 12px;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-secondary, #a0a0a0);
+}
+
+.desktop-capture-controls h4 {
+  margin-bottom: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary, #a0a0a0);
+}
+
+/* Source Selection */
+.source-selection {
+  margin-bottom: 24px;
+}
+
+.source-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.source-header h3 {
+  margin-bottom: 0;
+}
+
+.btn-sm {
+  padding: 4px 12px;
+  font-size: 0.875rem;
+}
+
+.loading-sources {
+  padding: 40px;
+  text-align: center;
+  color: var(--text-secondary, #a0a0a0);
+}
+
+.source-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.source-group {
+  background: var(--bg-card, #0f3460);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.source-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.source-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--bg-secondary, #16213e);
+  border: 2px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.source-item:hover {
+  border-color: var(--accent, #e94560);
+}
+
+.source-item.selected {
+  border-color: var(--accent, #e94560);
+  background: rgba(233, 69, 96, 0.15);
+}
+
+.source-thumbnail {
+  width: 64px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 4px;
+  background: var(--bg-primary, #1a1a2e);
+}
+
+.source-thumbnail.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+
+.source-name {
+  flex: 1;
+  font-size: 0.875rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary, #e8e8e8);
+}
+
+/* Capture Config */
+.capture-config {
+  background: var(--bg-card, #0f3460);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.config-row {
+  margin-bottom: 12px;
+}
+
+.config-row.nested {
+  margin-left: 24px;
+  margin-top: 8px;
+}
+
+.config-row label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary, #e8e8e8);
+}
+
+.config-row select {
+  width: 100%;
+  max-width: 300px;
+  padding: 8px 12px;
+  border: 1px solid var(--border, #2a2a4a);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  background: var(--bg-secondary, #16213e);
+  color: var(--text-primary, #e8e8e8);
+}
+
+.config-row select:focus {
+  outline: none;
+  border-color: var(--accent, #e94560);
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  color: var(--text-primary, #e8e8e8);
+}
+
+.checkbox-label.nested {
+  margin-left: 24px;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--accent, #e94560);
+}
+
+.checkbox-label span {
+  font-size: 0.875rem;
+}
+
+/* Recording Status */
+.recording-status {
+  background: rgba(233, 69, 96, 0.15);
+  border: 1px solid rgba(233, 69, 96, 0.4);
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.status-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.recording-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent, #e94560);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.recording-indicator.paused {
+  background: var(--warning, #ff9800);
+  animation: none;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.status-text {
+  font-weight: 500;
+  font-size: 1rem;
+  color: var(--text-primary, #e8e8e8);
+}
+
+.progress-stats {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 16px;
+}
+
+.progress-stats .stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.progress-stats .stat-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary, #e8e8e8);
+}
+
+.progress-stats .stat-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary, #a0a0a0);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.source-info {
+  font-size: 0.875rem;
+  color: var(--text-secondary, #a0a0a0);
+}
+
+/* Error Message */
+.desktop-capture-controls .error-message {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 6px;
+  color: #f87171;
+  font-size: 0.875rem;
+  margin-bottom: 16px;
+}
+
+.btn-dismiss {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0 4px;
+  opacity: 0.7;
+}
+
+.btn-dismiss:hover {
+  opacity: 1;
+}
+
+/* Action Buttons */
+.desktop-capture-controls .action-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.desktop-capture-controls .btn {
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s ease;
+}
+
+.desktop-capture-controls .btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.desktop-capture-controls .btn-secondary {
+  background: var(--bg-card, #0f3460);
+  color: var(--text-primary, #e8e8e8);
+}
+
+.desktop-capture-controls .btn-secondary:hover:not(:disabled) {
+  background: var(--bg-secondary, #16213e);
+}
+
+.desktop-capture-controls .btn-record {
+  background: var(--accent, #e94560);
+  color: white;
+  flex: 1;
+}
+
+.desktop-capture-controls .btn-record:hover:not(:disabled) {
+  background: var(--accent-hover, #ff6b6b);
+}
+
+.desktop-capture-controls .btn-pause {
+  background: var(--warning, #ff9800);
+  color: white;
+  flex: 1;
+}
+
+.desktop-capture-controls .btn-pause:hover {
+  background: #f59e0b;
+}
+
+.desktop-capture-controls .btn-stop {
+  background: #6b7280;
+  color: white;
+  flex: 1;
+}
+
+.desktop-capture-controls .btn-stop:hover {
+  background: #4b5563;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .source-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .progress-stats {
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .desktop-capture-controls .action-buttons {
+    flex-direction: column;
+  }
+}
