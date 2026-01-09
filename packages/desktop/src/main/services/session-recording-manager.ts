@@ -30,6 +30,7 @@ import type {
 } from '../capture';
 import { getActiveWindowTracker } from '../tracking';
 import { getRecordingsPath } from '../database';
+import { getRecordingIndexer } from './recording-indexer';
 
 // =============================================================================
 // Types
@@ -331,6 +332,17 @@ export class SessionRecordingManager extends EventEmitter {
       };
 
       state.status = 'stopped';
+
+      // 6. Index the recording so it appears in the session list
+      try {
+        const indexer = getRecordingIndexer();
+        await indexer.indexRecording(captureResult.filePath);
+        console.log(`[SessionManager] Recording indexed: ${captureResult.filePath}`);
+      } catch (indexError) {
+        console.error(`[SessionManager] Failed to index recording:`, indexError);
+        // Don't throw - recording was still successful, just not indexed
+      }
+
       this.emit('session:stopped', { sessionId, result });
       this.notifyRenderer('session:stopped', { sessionId, result });
 

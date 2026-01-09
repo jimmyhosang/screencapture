@@ -20,12 +20,14 @@ import {
   QUALITY_PRESETS,
   CaptureQuality
 } from './types';
+import { getStorageManager } from '../services/storage-manager';
 
 // =============================================================================
 // Constants
 // =============================================================================
 
-const DEFAULT_OUTPUT_DIR = join(app.getPath('userData'), 'recordings');
+// Default fallback if storage manager is not available
+const DEFAULT_OUTPUT_DIR = join(app.getPath('userData'), 'recordings', 'videos');
 const CHUNK_INTERVAL_MS = 10000; // 10 seconds between chunks
 
 // =============================================================================
@@ -91,7 +93,15 @@ export class DesktopCapturer {
     const preset = QUALITY_PRESETS[quality];
 
     // Create output directory for this session
-    const outputDir = options.outputDir || DEFAULT_OUTPUT_DIR;
+    // Use StorageManager paths for consistency with RecordingIndexer
+    let outputDir = options.outputDir || DEFAULT_OUTPUT_DIR;
+    try {
+      const storagePaths = getStorageManager().getPaths();
+      outputDir = storagePaths.recordings;
+    } catch {
+      // Fall back to default if storage manager isn't ready
+      console.warn('[DesktopCapturer] StorageManager not available, using default path');
+    }
     const sessionDir = join(outputDir, this.getDatePath());
     await mkdir(sessionDir, { recursive: true });
 
