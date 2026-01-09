@@ -1,0 +1,190 @@
+/**
+ * Input Event Overlay Styles
+ *
+ * Visual effects for mouse cursor, clicks, keystrokes, and scroll events
+ */
+
+.input-event-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 10;
+}
+
+/* Custom cursor indicator */
+.cursor-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 24px;
+  height: 24px;
+  z-index: 100;
+  transition: transform 0.05s ease-out;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.cursor-indicator svg {
+  display: block;
+}
+
+/* Click ripple effect */
+.click-ripple {
+  position: absolute;
+  width: 0;
+  height: 0;
+  transform: translate(-50%, -50%);
+  z-index: 90;
+}
+
+.ripple-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 40px;
+  height: 40px;
+  margin: -20px 0 0 -20px;
+  border-radius: 50%;
+  border: 3px solid var(--accent, #e94560);
+  animation: ripple-expand 0.6s ease-out forwards;
+  opacity: 0;
+}
+
+.ripple-ring.delay {
+  animation-delay: 0.1s;
+  border-width: 2px;
+}
+
+.click-ripple.right-click .ripple-ring {
+  border-color: var(--warning, #ff9800);
+}
+
+@keyframes ripple-expand {
+  0% {
+    width: 10px;
+    height: 10px;
+    margin: -5px 0 0 -5px;
+    opacity: 1;
+  }
+  100% {
+    width: 60px;
+    height: 60px;
+    margin: -30px 0 0 -30px;
+    opacity: 0;
+  }
+}
+
+/* Scroll indicator */
+.scroll-indicator {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-size: 24px;
+  font-weight: bold;
+  color: var(--accent, #e94560);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  animation: scroll-fade 0.4s ease-out forwards;
+  z-index: 85;
+}
+
+.scroll-indicator.scroll-down {
+  color: #4CAF50;
+}
+
+.scroll-indicator.scroll-up {
+  color: #2196F3;
+}
+
+@keyframes scroll-fade {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -80%) scale(0.5);
+  }
+}
+
+/* Keystroke display */
+.keystroke-display {
+  position: absolute;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 8px;
+  backdrop-filter: blur(8px);
+  z-index: 80;
+}
+
+.keystroke-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 32px;
+  padding: 4px 10px;
+  background: linear-gradient(180deg, #4a4a4a 0%, #2a2a2a 100%);
+  border: 1px solid #555;
+  border-radius: 6px;
+  box-shadow:
+    0 2px 0 #1a1a1a,
+    0 3px 3px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+  font-size: 14px;
+  font-weight: 500;
+  text-transform: uppercase;
+  animation: key-press 0.15s ease-out;
+}
+
+@keyframes key-press {
+  0% {
+    transform: translateY(-2px);
+    box-shadow:
+      0 4px 0 #1a1a1a,
+      0 5px 5px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+  50% {
+    transform: translateY(2px);
+    box-shadow:
+      0 0 0 #1a1a1a,
+      0 1px 1px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+  100% {
+    transform: translateY(0);
+    box-shadow:
+      0 2px 0 #1a1a1a,
+      0 3px 3px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* Special modifier keys */
+.keystroke-key[data-modifier="true"] {
+  background: linear-gradient(180deg, #3a3a3a 0%, #1a1a1a 100%);
+  font-size: 12px;
+}
+
+/* Fade out animation for keystrokes */
+.keystroke-key {
+  animation: key-press 0.15s ease-out, key-fade 2s ease-out forwards;
+}
+
+@keyframes key-fade {
+  0%, 70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}

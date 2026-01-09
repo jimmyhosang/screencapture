@@ -1,0 +1,155 @@
+/**
+ * Input Events Timeline Styles
+ *
+ * Density visualization and event markers for playback timeline
+ */
+
+.input-events-timeline {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-secondary, #16213e);
+  border-radius: 4px;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Legend */
+.timeline-legend {
+  display: flex;
+  gap: 16px;
+  padding: 6px 12px;
+  font-size: 11px;
+  color: var(--text-secondary, #a0a0a0);
+  background: var(--bg-card, #0f3460);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.legend-item.clicks .legend-dot {
+  background: var(--accent, #e94560);
+}
+
+.legend-item.keystrokes .legend-dot {
+  background: #4CAF50;
+}
+
+.legend-item.scrolls .legend-dot {
+  background: #2196F3;
+}
+
+/* Density visualization */
+.timeline-density {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.density-bar {
+  position: relative;
+  display: flex;
+  flex-direction: column-reverse;
+  min-height: 2px;
+  background: rgba(255, 255, 255, 0.05);
+  transition: height 0.1s ease;
+}
+
+.density-bar:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.bar-segment {
+  width: 100%;
+  min-height: 1px;
+  transition: height 0.15s ease;
+}
+
+.bar-segment.clicks {
+  background: var(--accent, #e94560);
+}
+
+.bar-segment.keystrokes {
+  background: #4CAF50;
+}
+
+.bar-segment.scrolls {
+  background: #2196F3;
+}
+
+/* Progress overlay */
+.timeline-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: rgba(233, 69, 96, 0.2);
+  pointer-events: none;
+  transition: width 0.05s linear;
+}
+
+/* Playhead */
+.timeline-playhead {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 100%;
+  background: var(--accent, #e94560);
+  pointer-events: none;
+  z-index: 10;
+  transition: left 0.05s linear;
+}
+
+.timeline-playhead::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  width: 10px;
+  height: 10px;
+  background: var(--accent, #e94560);
+  border-radius: 50%;
+}
+
+/* Event markers */
+.event-markers {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.event-marker {
+  position: absolute;
+  top: 2px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  opacity: 0.8;
+}
+
+.event-marker.click {
+  background: var(--accent, #e94560);
+}
+
+.event-marker.keydown {
+  background: #4CAF50;
+}
+
+.event-marker.scroll {
+  background: #2196F3;
+}
