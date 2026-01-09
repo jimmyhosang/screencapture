@@ -185,8 +185,16 @@ export class RecordingIndexer {
       for (const entry of entries) {
         const fullPath = join(currentDir, entry.name);
         if (entry.isDirectory()) {
+          // Skip chunk directories (temporary files during recording)
+          if (entry.name.endsWith('_chunks')) {
+            continue;
+          }
           await processDir(fullPath);
         } else if (entry.name.endsWith('.webm')) {
+          // Skip chunk files
+          if (entry.name.startsWith('chunk_')) {
+            continue;
+          }
           recordings.push(fullPath);
         }
       }
@@ -565,6 +573,10 @@ export class RecordingIndexer {
 
     const watcher = watch(paths.recordings, { recursive: true }, async (eventType, filename) => {
       if (filename && filename.endsWith('.webm') && eventType === 'rename') {
+        // Skip chunk files and files in chunk directories
+        if (filename.includes('_chunks') || basename(filename).startsWith('chunk_')) {
+          return;
+        }
         const filePath = join(paths.recordings, filename);
         if (existsSync(filePath)) {
           // New file added, queue for indexing
