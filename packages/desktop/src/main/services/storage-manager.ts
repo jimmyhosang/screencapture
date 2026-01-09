@@ -93,7 +93,7 @@ export class StorageManager {
   private initializePaths(): StoragePaths {
     return {
       base: this.config.basePath,
-      recordings: join(this.config.basePath, 'videos'),
+      recordings: this.config.basePath, // Use base path directly (date folders inside)
       thumbnails: join(this.config.basePath, 'thumbnails'),
       temp: join(this.config.basePath, 'temp'),
       exports: join(this.config.basePath, 'exports')

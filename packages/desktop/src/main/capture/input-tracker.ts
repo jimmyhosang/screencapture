@@ -6,6 +6,7 @@
  */
 
 import { uIOhook, UiohookKey, UiohookMouseEvent, UiohookKeyboardEvent, UiohookWheelEvent } from 'uiohook-napi';
+import { systemPreferences } from 'electron';
 import {
   InputEvent,
   InputEventType,
@@ -15,6 +16,14 @@ import {
   DEFAULT_INPUT_CONFIG,
   KEY_NAMES
 } from './input-types';
+
+// Helper to check if Accessibility permissions are granted (macOS)
+function hasAccessibilityPermission(): boolean {
+  if (process.platform === 'darwin') {
+    return systemPreferences.isTrustedAccessibilityClient(false);
+  }
+  return true; // Non-macOS platforms don't need this check
+}
 
 // =============================================================================
 // InputTracker Class
@@ -155,6 +164,13 @@ export class InputTracker {
 
   private startHook(): void {
     if (this.isHookStarted) {
+      return;
+    }
+
+    // Check Accessibility permission first to prevent native crash
+    if (!hasAccessibilityPermission()) {
+      console.warn('[InputTracker] Accessibility permission not granted. Input tracking disabled.');
+      console.warn('[InputTracker] Grant Accessibility permission in System Preferences > Privacy & Security > Accessibility');
       return;
     }
 

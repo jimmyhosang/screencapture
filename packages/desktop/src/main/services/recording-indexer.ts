@@ -202,8 +202,14 @@ export class RecordingIndexer {
   async indexRecording(filePath: string): Promise<IndexedRecording> {
     console.log(`[RecordingIndexer] Indexing: ${filePath}`);
 
-    // Extract video metadata using ffprobe
-    const videoMeta = await this.extractVideoMetadata(filePath);
+    // Extract video metadata using ffprobe (optional - fallback to defaults if ffprobe not available)
+    let videoMeta;
+    try {
+      videoMeta = await this.extractVideoMetadata(filePath);
+    } catch (error) {
+      console.warn(`[RecordingIndexer] Could not extract video metadata, using defaults:`, (error as Error).message);
+      videoMeta = { duration: 0, resolution: 'unknown', fps: 30, codec: 'webm' };
+    }
 
     // Look for sidecar metadata file
     const metadataPath = filePath.replace('.webm', '.meta.json');
@@ -233,8 +239,14 @@ export class RecordingIndexer {
         ? altActivityPath
         : null;
 
-    // Generate thumbnail
-    const thumbnailResult = await this.generateThumbnail(filePath);
+    // Generate thumbnail (optional - skip if ffmpeg not available)
+    let thumbnailResult;
+    try {
+      thumbnailResult = await this.generateThumbnail(filePath);
+    } catch (error) {
+      console.warn(`[RecordingIndexer] Could not generate thumbnail:`, (error as Error).message);
+      thumbnailResult = { success: false, thumbnailPath: null };
+    }
 
     // Extract callId and agentId from filename or metadata
     const filename = basename(filePath);

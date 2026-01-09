@@ -66,17 +66,42 @@ function RecordingsList({ onPlay, onExport }: RecordingsListProps): JSX.Element 
   const [loading, setLoading] = useState(true);
 
   const loadRecordings = useCallback(async () => {
-    if (!window.api?.recordings?.getAll) {
-      console.error('recordings API not available');
+    if (!window.api?.indexer?.list) {
+      console.error('indexer API not available');
       setLoading(false);
       return;
     }
     try {
-      const allRecordings = await window.api.recordings.getAll();
-      setRecordings(allRecordings);
+      // Use indexer.list to get paginated recordings
+      const result = await window.api.indexer.list({}, 1, 100);
 
-      const recordingStats = await window.api.recordings.stats();
-      setStats(recordingStats);
+      // Map indexed recordings to the VideoRecording interface
+      const mappedRecordings = result.recordings.map(rec => ({
+        id: rec.id,
+        filename: rec.filename,
+        sourceType: 'screen', // Default for now
+        sourceName: rec.callId || 'Unknown',
+        duration: rec.duration,
+        startTime: rec.startTime,
+        resolution: rec.resolution,
+        fps: rec.fps,
+        fileSize: rec.fileSize,
+        filePath: rec.filePath,
+        thumbnailPath: rec.thumbnailPath,
+        status: rec.status
+      }));
+
+      setRecordings(mappedRecordings);
+
+      // Calculate stats from the recordings
+      const totalDuration = mappedRecordings.reduce((sum, r) => sum + r.duration, 0);
+      const totalSize = mappedRecordings.reduce((sum, r) => sum + r.fileSize, 0);
+      setStats({
+        recordingCount: mappedRecordings.length,
+        totalDuration,
+        totalSize,
+        averageDuration: mappedRecordings.length > 0 ? totalDuration / mappedRecordings.length : 0
+      });
     } catch (error) {
       console.error('Error loading recordings:', error);
     } finally {
@@ -89,18 +114,14 @@ function RecordingsList({ onPlay, onExport }: RecordingsListProps): JSX.Element 
   }, [loadRecordings]);
 
   const handleImport = async () => {
-    const imported = await window.api.recordings.import();
-    if (imported) {
-      // Generate thumbnail for imported recording
-      await window.api.recordings.generateThumbnail(imported.id);
-      loadRecordings();
-    }
+    // Import functionality - could be added to indexer later
+    alert('Import feature coming soon!');
   };
 
   const handleDelete = async (id: string) => {
     const confirmed = window.confirm('Are you sure you want to delete this recording?');
     if (confirmed) {
-      await window.api.recordings.delete(id);
+      await window.api.indexer.delete(id);
       if (selectedId === id) {
         setSelectedId(null);
       }
@@ -109,7 +130,9 @@ function RecordingsList({ onPlay, onExport }: RecordingsListProps): JSX.Element 
   };
 
   const handleOpenFolder = async () => {
-    await window.api.recordings.openFolder();
+    // Open the recordings folder
+    const paths = await window.api.storage.getPaths();
+    window.open(`file://${paths.recordings}`);
   };
 
   const filteredRecordings = recordings.filter(recording =>
