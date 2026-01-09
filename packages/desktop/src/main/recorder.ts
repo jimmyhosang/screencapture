@@ -115,12 +115,24 @@ async function startRecordingUrl(
             webPreferences: {
                 nodeIntegration: false,
                 contextIsolation: true,
-                sandbox: true
+                sandbox: false, // Disable sandbox to allow cross-origin requests
+                webSecurity: false // Allow loading cross-origin resources for recording
+            }
+        });
+
+        // Handle navigation failures
+        recordingWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+            // Ignore -3 (ERR_ABORTED) as it often happens during redirects
+            if (errorCode !== -3) {
+                console.error(`Failed to load ${validatedURL}: ${errorDescription} (${errorCode})`);
             }
         });
 
         // Load the target URL
         await recordingWindow.loadURL(url);
+
+        // Wait a moment for page to settle before injecting script
+        await new Promise(resolve => setTimeout(resolve, 500));
 
         // Inject rrweb recording script
         await recordingWindow.webContents.executeJavaScript(generateRecordingScript(config));

@@ -3,6 +3,7 @@ import { join } from 'path';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import { initDatabase, getDatabase } from './database';
 import { setupRecordingHandlers } from './recordings';
+import { setupRecordingHandlers as setupRecorderHandlers } from './recorder';
 import { setupOCRHandlers } from './ocr';
 import { setupRedactionHandlers } from './redaction';
 import { setupPerformanceHandlers } from './performance';
@@ -437,6 +438,7 @@ app.whenReady().then(() => {
   // Setup IPC handlers
   setupIpcHandlers();
   setupRecordingHandlers();
+  setupRecorderHandlers();
   setupOCRHandlers();
   setupRedactionHandlers();
   setupPerformanceHandlers();
