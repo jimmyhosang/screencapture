@@ -738,6 +738,226 @@ const api = {
     removeProgressListener: (): void => {
       ipcRenderer.removeAllListeners('ocr:progress');
     }
+  },
+
+  // Desktop Capture (native screen capture)
+  capture: {
+    getSources: (): Promise<Array<{
+      id: string;
+      name: string;
+      thumbnail: string;
+      displayId?: string;
+      isScreen: boolean;
+      isWindow: boolean;
+      appIcon?: string;
+    }>> =>
+      ipcRenderer.invoke('capture:getSources'),
+    start: (options: {
+      sourceId: string;
+      quality?: 'low' | 'medium' | 'high' | 'ultra';
+      resolution?: { width: number; height: number };
+      frameRate?: number;
+      metadata?: Record<string, unknown>;
+    }): Promise<{ sessionId: string }> =>
+      ipcRenderer.invoke('capture:start', options),
+    stop: (sessionId: string): Promise<{
+      sessionId: string;
+      filePath: string;
+      duration: number;
+      fileSize: number;
+      resolution: { width: number; height: number };
+      frameRate: number;
+      chunksMerged: number;
+    }> =>
+      ipcRenderer.invoke('capture:stop', sessionId),
+    pause: (sessionId: string): Promise<void> =>
+      ipcRenderer.invoke('capture:pause', sessionId),
+    resume: (sessionId: string): Promise<void> =>
+      ipcRenderer.invoke('capture:resume', sessionId),
+    getState: (sessionId: string): Promise<{
+      sessionId: string;
+      sourceId: string;
+      sourceName: string;
+      status: string;
+      startTime: number;
+      duration: number;
+    } | null> =>
+      ipcRenderer.invoke('capture:getState', sessionId),
+    getActive: (): Promise<Array<{
+      sessionId: string;
+      sourceId: string;
+      sourceName: string;
+      status: string;
+      startTime: number;
+    }>> =>
+      ipcRenderer.invoke('capture:getActive'),
+    sendChunk: (data: {
+      sessionId: string;
+      index: number;
+      data: ArrayBuffer;
+      timestamp: number;
+      duration: number;
+    }): void => {
+      ipcRenderer.send('capture:chunk', data);
+    },
+    notifyStarted: (sessionId: string): void => {
+      ipcRenderer.send('capture:started', { sessionId });
+    },
+    notifyStopped: (sessionId: string): void => {
+      ipcRenderer.send('capture:stopped', { sessionId });
+    },
+    notifyError: (sessionId: string, error: string): void => {
+      ipcRenderer.send('capture:error', { sessionId, error });
+    },
+    // Event listeners
+    onStartMedia: (callback: (data: {
+      sessionId: string;
+      sourceId: string;
+      constraints: MediaStreamConstraints;
+    }) => void): void => {
+      ipcRenderer.on('capture:startMedia', (_, data) => callback(data));
+    },
+    onStopMedia: (callback: (data: { sessionId: string }) => void): void => {
+      ipcRenderer.on('capture:stopMedia', (_, data) => callback(data));
+    },
+    onPauseMedia: (callback: (data: { sessionId: string }) => void): void => {
+      ipcRenderer.on('capture:pauseMedia', (_, data) => callback(data));
+    },
+    onResumeMedia: (callback: (data: { sessionId: string }) => void): void => {
+      ipcRenderer.on('capture:resumeMedia', (_, data) => callback(data));
+    },
+    onProgress: (callback: (data: {
+      sessionId: string;
+      duration: number;
+      chunkCount: number;
+    }) => void): void => {
+      ipcRenderer.on('capture:progress', (_, data) => callback(data));
+    },
+    onError: (callback: (data: {
+      sessionId: string;
+      error: string;
+    }) => void): void => {
+      ipcRenderer.on('capture:error', (_, data) => callback(data));
+    },
+    removeAllListeners: (): void => {
+      ipcRenderer.removeAllListeners('capture:startMedia');
+      ipcRenderer.removeAllListeners('capture:stopMedia');
+      ipcRenderer.removeAllListeners('capture:pauseMedia');
+      ipcRenderer.removeAllListeners('capture:resumeMedia');
+      ipcRenderer.removeAllListeners('capture:progress');
+      ipcRenderer.removeAllListeners('capture:error');
+    }
+  },
+
+  // Input Tracking (global mouse, keyboard, scroll events)
+  input: {
+    start: (sessionId: string, config?: {
+      mouseMoveThrottleMs?: number;
+      scrollThrottleMs?: number;
+      significantMoveThreshold?: number;
+      keyboardMode?: 'full' | 'masked' | 'none';
+      excludedProcesses?: string[];
+      captureMouseClicks?: boolean;
+      captureMouseMove?: boolean;
+      captureKeyboard?: boolean;
+      captureScroll?: boolean;
+    }): Promise<{ success: boolean; sessionId: string }> =>
+      ipcRenderer.invoke('input:start', sessionId, config),
+    stop: (): Promise<Array<{
+      timestamp: number;
+      type: 'mousedown' | 'mouseup' | 'click' | 'mousemove' | 'scroll' | 'keydown' | 'keyup';
+      x?: number;
+      y?: number;
+      button?: number;
+      keycode?: number;
+      key?: string;
+      modifiers?: { ctrl: boolean; alt: boolean; shift: boolean; meta: boolean };
+      scrollDelta?: { x: number; y: number };
+      duration?: number;
+    }>> =>
+      ipcRenderer.invoke('input:stop'),
+    pause: (): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke('input:pause'),
+    resume: (): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke('input:resume'),
+    getEvents: (): Promise<Array<{
+      timestamp: number;
+      type: 'mousedown' | 'mouseup' | 'click' | 'mousemove' | 'scroll' | 'keydown' | 'keyup';
+      x?: number;
+      y?: number;
+      button?: number;
+      keycode?: number;
+      key?: string;
+      modifiers?: { ctrl: boolean; alt: boolean; shift: boolean; meta: boolean };
+      scrollDelta?: { x: number; y: number };
+      duration?: number;
+    }>> =>
+      ipcRenderer.invoke('input:getEvents'),
+    getConfig: (): Promise<{
+      mouseMoveThrottleMs: number;
+      scrollThrottleMs: number;
+      significantMoveThreshold: number;
+      keyboardMode: 'full' | 'masked' | 'none';
+      excludedProcesses: string[];
+      captureMouseClicks: boolean;
+      captureMouseMove: boolean;
+      captureKeyboard: boolean;
+      captureScroll: boolean;
+    }> =>
+      ipcRenderer.invoke('input:getConfig'),
+    setConfig: (config: Partial<{
+      mouseMoveThrottleMs: number;
+      scrollThrottleMs: number;
+      significantMoveThreshold: number;
+      keyboardMode: 'full' | 'masked' | 'none';
+      excludedProcesses: string[];
+      captureMouseClicks: boolean;
+      captureMouseMove: boolean;
+      captureKeyboard: boolean;
+      captureScroll: boolean;
+    }>): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke('input:setConfig', config),
+    getState: (): Promise<{
+      sessionId: string | null;
+      isTracking: boolean;
+      isPaused: boolean;
+      startTime: number;
+      eventCount: number;
+    }> =>
+      ipcRenderer.invoke('input:getState'),
+    updateWindow: (windowInfo: {
+      processName?: string;
+      windowTitle?: string;
+      url?: string;
+    }): void => {
+      ipcRenderer.send('input:updateWindow', windowInfo);
+    },
+    saveEvents: (videoPath: string, events: Array<{
+      timestamp: number;
+      type: string;
+      x?: number;
+      y?: number;
+      button?: number;
+      keycode?: number;
+      key?: string;
+      modifiers?: { ctrl: boolean; alt: boolean; shift: boolean; meta: boolean };
+      scrollDelta?: { x: number; y: number };
+      duration?: number;
+    }>): Promise<{ success: boolean; path: string }> =>
+      ipcRenderer.invoke('input:saveEvents', videoPath, events),
+    loadEvents: (videoPath: string): Promise<Array<{
+      timestamp: number;
+      type: string;
+      x?: number;
+      y?: number;
+      button?: number;
+      keycode?: number;
+      key?: string;
+      modifiers?: { ctrl: boolean; alt: boolean; shift: boolean; meta: boolean };
+      scrollDelta?: { x: number; y: number };
+      duration?: number;
+    }>> =>
+      ipcRenderer.invoke('input:loadEvents', videoPath)
   }
 };
 

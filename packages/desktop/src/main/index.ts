@@ -10,6 +10,7 @@ import { setupPerformanceHandlers } from './performance';
 import { setupTaskHandlers } from './workers/taskManager';
 import { setupCCaaSHandlers, initCCaaS, cleanupCCaaS } from './ccaas';
 import { setupTrackingHandlers, cleanupTracking } from './tracking';
+import { setupCaptureHandlers, cleanupCapture, updateCaptureMainWindow } from './capture';
 import {
   setupRecordingManagerHandlers,
   shutdownRecordingManager,
@@ -465,6 +466,7 @@ app.whenReady().then(() => {
   setupTaskHandlers();
   setupCCaaSHandlers();
   setupTrackingHandlers();
+  setupCaptureHandlers();
   setupRecordingManagerHandlers();
   setupStorageHandlers();
   setupIndexerHandlers();
@@ -474,6 +476,11 @@ app.whenReady().then(() => {
   // Create window and tray
   createWindow();
   createTray();
+
+  // Set main window reference for capture module
+  if (mainWindow) {
+    updateCaptureMainWindow(mainWindow);
+  }
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -494,6 +501,7 @@ app.on('before-quit', async () => {
   app.isQuitting = true;
   globalShortcut.unregisterAll();
   cleanupTracking();
+  await cleanupCapture();
   await shutdownRecordingManager();
   shutdownStorageManager();
   shutdownRecordingIndexer();
