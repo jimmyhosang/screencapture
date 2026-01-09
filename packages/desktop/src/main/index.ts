@@ -15,7 +15,9 @@ import {
   setupStorageHandlers,
   shutdownStorageManager,
   setupIndexerHandlers,
-  shutdownRecordingIndexer
+  shutdownRecordingIndexer,
+  setupOcrProcessorHandlers,
+  shutdownOcrProcessor
 } from './services';
 import type { SessionRecord, SessionStats, AppSettings } from './types';
 
@@ -464,6 +466,7 @@ app.whenReady().then(() => {
   setupRecordingManagerHandlers();
   setupStorageHandlers();
   setupIndexerHandlers();
+  setupOcrProcessorHandlers();
   setupKeyboardShortcuts();
 
   // Create window and tray
@@ -491,5 +494,6 @@ app.on('before-quit', async () => {
   await shutdownRecordingManager();
   shutdownStorageManager();
   shutdownRecordingIndexer();
+  shutdownOcrProcessor();
   cleanupCCaaS();
 });

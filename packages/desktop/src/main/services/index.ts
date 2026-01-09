@@ -45,3 +45,16 @@ export {
   type RecordingFilter,
   type PaginatedRecordings
 } from './recording-indexer';
+
+export {
+  OcrProcessor,
+  getOcrProcessor,
+  setupOcrProcessorHandlers,
+  shutdownOcrProcessor,
+  type OcrOptions,
+  type OcrReport,
+  type OcrFrame,
+  type OcrJobStatus,
+  type WordInfo,
+  type Rectangle
+} from './ocr-processor';

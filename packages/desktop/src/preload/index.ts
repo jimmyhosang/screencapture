@@ -58,6 +58,12 @@ import type {
   RecordingFilter,
   PaginatedRecordings
 } from '../main/services/recording-indexer';
+import type {
+  OcrOptions,
+  OcrReport,
+  OcrFrame,
+  OcrJobStatus
+} from '../main/services/ocr-processor';
 
 // Expose protected methods that allow the renderer process to use
 // ipcRenderer without exposing the entire object
@@ -518,6 +524,51 @@ const api = {
       ipcRenderer.invoke('indexer:indexAll'),
     reindex: (id: string): Promise<IndexedRecording | null> =>
       ipcRenderer.invoke('indexer:reindex', id)
+  },
+
+  // OCR Processor (text extraction from recordings)
+  ocrProcessor: {
+    queue: (recordingId: string, options?: Partial<OcrOptions>): Promise<string> =>
+      ipcRenderer.invoke('ocrProcessor:queue', recordingId, options),
+    process: (recordingId: string, options?: Partial<OcrOptions>): Promise<OcrReport> =>
+      ipcRenderer.invoke('ocrProcessor:process', recordingId, options),
+    getReport: (id: string): Promise<OcrReport | null> =>
+      ipcRenderer.invoke('ocrProcessor:getReport', id),
+    getReportByRecording: (recordingId: string): Promise<OcrReport | null> =>
+      ipcRenderer.invoke('ocrProcessor:getReportByRecording', recordingId),
+    getAllReports: (): Promise<OcrReport[]> =>
+      ipcRenderer.invoke('ocrProcessor:getAllReports'),
+    deleteReport: (id: string): Promise<boolean> =>
+      ipcRenderer.invoke('ocrProcessor:deleteReport', id),
+    search: (query: string, recordingId?: string): Promise<Array<{
+      reportId: string;
+      recordingId: string;
+      frames: Array<{ timestamp: number; text: string; matchCount: number }>;
+    }>> =>
+      ipcRenderer.invoke('ocrProcessor:search', query, recordingId),
+    getTextAtTimestamp: (recordingId: string, timestamp: number): Promise<OcrFrame | null> =>
+      ipcRenderer.invoke('ocrProcessor:getTextAtTimestamp', recordingId, timestamp),
+    getQueueStatus: (): Promise<OcrJobStatus[]> =>
+      ipcRenderer.invoke('ocrProcessor:getQueueStatus'),
+    cancelJob: (jobId: string): Promise<boolean> =>
+      ipcRenderer.invoke('ocrProcessor:cancelJob', jobId),
+    pause: (): Promise<void> =>
+      ipcRenderer.invoke('ocrProcessor:pause'),
+    resume: (): Promise<void> =>
+      ipcRenderer.invoke('ocrProcessor:resume'),
+    // Event listener for progress updates
+    onProgress: (callback: (data: {
+      jobId: string;
+      recordingId: string;
+      status: string;
+      progress: number;
+      message?: string;
+    }) => void): void => {
+      ipcRenderer.on('ocr:progress', (_, data) => callback(data));
+    },
+    removeProgressListener: (): void => {
+      ipcRenderer.removeAllListeners('ocr:progress');
+    }
   }
 };
 
