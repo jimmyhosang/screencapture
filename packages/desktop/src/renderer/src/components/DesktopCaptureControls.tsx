@@ -9,6 +9,38 @@ interface CaptureSource {
   isWindow: boolean;
 }
 
+// Thumbnail component with error handling
+function SourceThumbnail({ src, alt, isScreen }: { src: string; alt: string; isScreen: boolean }) {
+  const [hasError, setHasError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fallbackIcon = isScreen ? '🖥️' : '📋';
+
+  // Check if thumbnail is valid
+  const isValidThumbnail = src && src.startsWith('data:image');
+
+  if (!isValidThumbnail || hasError) {
+    return <div className="source-thumbnail placeholder">{fallbackIcon}</div>;
+  }
+
+  return (
+    <>
+      {isLoading && <div className="source-thumbnail placeholder loading">{fallbackIcon}</div>}
+      <img
+        src={src}
+        alt={alt}
+        className="source-thumbnail"
+        style={{ display: isLoading ? 'none' : 'block' }}
+        onLoad={() => setIsLoading(false)}
+        onError={() => {
+          setHasError(true);
+          setIsLoading(false);
+        }}
+      />
+    </>
+  );
+}
+
 interface SessionProgress {
   sessionId: string;
   duration: number;
@@ -248,11 +280,7 @@ export default function DesktopCaptureControls({ onRecordingComplete }: DesktopC
                       className={`source-item ${selectedSource?.id === source.id ? 'selected' : ''}`}
                       onClick={() => setSelectedSource(source)}
                     >
-                      {source.thumbnail ? (
-                        <img src={source.thumbnail} alt={source.name} className="source-thumbnail" />
-                      ) : (
-                        <div className="source-thumbnail placeholder">🖥️</div>
-                      )}
+                      <SourceThumbnail src={source.thumbnail} alt={source.name} isScreen={true} />
                       <span className="source-name">{source.name}</span>
                     </div>
                   ))}
@@ -269,11 +297,7 @@ export default function DesktopCaptureControls({ onRecordingComplete }: DesktopC
                       className={`source-item ${selectedSource?.id === source.id ? 'selected' : ''}`}
                       onClick={() => setSelectedSource(source)}
                     >
-                      {source.thumbnail ? (
-                        <img src={source.thumbnail} alt={source.name} className="source-thumbnail" />
-                      ) : (
-                        <div className="source-thumbnail placeholder">📋</div>
-                      )}
+                      <SourceThumbnail src={source.thumbnail} alt={source.name} isScreen={false} />
                       <span className="source-name">{source.name}</span>
                     </div>
                   ))}
