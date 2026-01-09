@@ -26,5 +26,12 @@
   "license": "MIT",
   "engines": {
     "node": ">=18.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "better-sqlite3",
+      "esbuild"
+    ]
   }
 }

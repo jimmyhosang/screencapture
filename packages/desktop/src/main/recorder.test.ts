@@ -16,7 +16,8 @@ const mocks = vi.hoisted(() => {
 
 vi.mock('electron', () => {
     // Use a regular function for the mock implementation to support 'new'
-    const MockBrowserWindow = vi.fn(function () {
+    const MockBrowserWindow = vi.fn(function (options) { // Capture options
+        // Store options for verification if needed, or simply let the testspy capture it
         return {
             loadURL: mocks.loadURL,
             webContents: {
@@ -24,7 +25,8 @@ vi.mock('electron', () => {
                 on: mocks.on
             },
             on: mocks.on,
-            close: mocks.close
+            close: mocks.close,
+            options // Expose options for test assertion if we returned the instance, but verification is done on constructor spy
         };
     });
 
@@ -85,6 +87,12 @@ describe('Recorder Logic', () => {
 
         expect(result).toEqual({ success: true });
         expect(BrowserWindow).toHaveBeenCalledTimes(1);
+
+        // Verify webPreferences fix for ERR_ABORTED
+        const constructorOptions = (BrowserWindow as any).mock.calls[0][0];
+        expect(constructorOptions.webPreferences.sandbox).toBe(false);
+        expect(constructorOptions.webPreferences.webSecurity).toBe(false);
+
         expect(mocks.loadURL).toHaveBeenCalledWith(url);
         expect(mocks.executeJavaScript).toHaveBeenCalled();
 
