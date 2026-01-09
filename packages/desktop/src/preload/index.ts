@@ -32,6 +32,12 @@ import type {
   TaskOptions,
   TaskStatus
 } from '../main/workers/taskManager';
+import type {
+  CCaaSWebhookConfig,
+  CCaaSServerStatus,
+  CCaaSEvent,
+  CallState
+} from '../main/ccaas/types';
 
 // Expose protected methods that allow the renderer process to use
 // ipcRenderer without exposing the entire object
@@ -383,6 +389,58 @@ const api = {
     },
     removeListUpdateListener: (): void => {
       ipcRenderer.removeAllListeners('tasks:listUpdate');
+    }
+  },
+
+  // CCaaS (Contact Center as a Service) integration
+  ccaas: {
+    getStatus: (): Promise<CCaaSServerStatus> =>
+      ipcRenderer.invoke('ccaas:getStatus'),
+    start: (config?: Partial<CCaaSWebhookConfig>): Promise<boolean> =>
+      ipcRenderer.invoke('ccaas:start', config),
+    stop: (): Promise<boolean> =>
+      ipcRenderer.invoke('ccaas:stop'),
+    testWebhook: (event: CCaaSEvent): Promise<{ success: boolean; message: string }> =>
+      ipcRenderer.invoke('ccaas:testWebhook', event),
+    getConfig: (): Promise<CCaaSWebhookConfig> =>
+      ipcRenderer.invoke('ccaas:getConfig'),
+    updateConfig: (config: Partial<CCaaSWebhookConfig>): Promise<CCaaSWebhookConfig> =>
+      ipcRenderer.invoke('ccaas:updateConfig', config),
+    getCallSummary: (): Promise<{
+      activeCalls: number;
+      activeRecordings: number;
+      calls: Array<{
+        callId: string;
+        agentId: string;
+        direction: string;
+        status: string;
+        hasRecording: boolean;
+      }>;
+    }> =>
+      ipcRenderer.invoke('ccaas:getCallSummary'),
+    getActiveCalls: (): Promise<CallState[]> =>
+      ipcRenderer.invoke('ccaas:getActiveCalls'),
+    // Event listeners for CCaaS recording events
+    onRecordingStart: (callback: (data: {
+      sessionId: string;
+      callId: string;
+      agentId: string;
+      direction: string;
+      customerId?: string;
+      timestamp: string;
+    }) => void): void => {
+      ipcRenderer.on('ccaas:recordingStart', (_, data) => callback(data));
+    },
+    onRecordingStop: (callback: (data: {
+      sessionId: string;
+      callId: string;
+      timestamp: string;
+    }) => void): void => {
+      ipcRenderer.on('ccaas:recordingStop', (_, data) => callback(data));
+    },
+    removeRecordingListeners: (): void => {
+      ipcRenderer.removeAllListeners('ccaas:recordingStart');
+      ipcRenderer.removeAllListeners('ccaas:recordingStop');
     }
   }
 };

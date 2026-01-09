@@ -8,6 +8,7 @@ import { setupOCRHandlers } from './ocr';
 import { setupRedactionHandlers } from './redaction';
 import { setupPerformanceHandlers } from './performance';
 import { setupTaskHandlers } from './workers/taskManager';
+import { setupCCaaSHandlers, initCCaaS, cleanupCCaaS } from './ccaas';
 import type { SessionRecord, SessionStats, AppSettings } from './types';
 
 let mainWindow: BrowserWindow | null = null;
@@ -400,7 +401,15 @@ function setupIpcHandlers(): void {
         maskPiiPatterns: true
       },
       autoImportPath: null,
-      recordingsPath: null
+      recordingsPath: null,
+      ccaas: {
+        enabled: false,
+        port: 3847,
+        secret: '',
+        allowedQueues: [],
+        autoRecord: true,
+        recordingPath: null
+      }
     };
   });
 
@@ -443,6 +452,7 @@ app.whenReady().then(() => {
   setupRedactionHandlers();
   setupPerformanceHandlers();
   setupTaskHandlers();
+  setupCCaaSHandlers();
   setupKeyboardShortcuts();
 
   // Create window and tray
@@ -467,4 +477,5 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   app.isQuitting = true;
   globalShortcut.unregisterAll();
+  cleanupCCaaS();
 });

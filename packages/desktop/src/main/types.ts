@@ -22,6 +22,15 @@ export interface SessionStats {
   averageDuration: number;
 }
 
+export interface CCaaSSettings {
+  enabled: boolean;
+  port: number;
+  secret: string;
+  allowedQueues: string[];
+  autoRecord: boolean;
+  recordingPath: string | null;
+}
+
 export interface AppSettings {
   theme: 'light' | 'dark' | 'system';
   defaultPrivacy: {
@@ -31,6 +40,7 @@ export interface AppSettings {
   };
   autoImportPath: string | null;
   recordingsPath: string | null;
+  ccaas: CCaaSSettings;
 }
 
 // Video Recording Types
