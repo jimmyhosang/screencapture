@@ -93,6 +93,11 @@ const api = {
     openFile: (): Promise<string | null> => ipcRenderer.invoke('dialog:openFile')
   },
 
+  // Shell operations
+  shell: {
+    openPath: (path: string): Promise<string> => ipcRenderer.invoke('shell:openPath', path)
+  },
+
   // Event listeners
   on: {
     importSessionFile: (callback: (filePath: string) => void): void => {

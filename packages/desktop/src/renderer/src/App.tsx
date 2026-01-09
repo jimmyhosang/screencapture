@@ -23,6 +23,11 @@ interface Session {
     blockSensitive: boolean;
     maskPiiPatterns: boolean;
   } | null;
+  // Desktop recording fields
+  isDesktopRecording?: boolean;
+  filePath?: string;
+  thumbnailBase64?: string;
+  resolution?: string;
 }
 
 interface Stats {
@@ -43,11 +48,49 @@ function App(): JSX.Element {
   const [showOCRTest, setShowOCRTest] = useState(false);
 
   const loadSessions = useCallback(async () => {
-    if (!window.api?.sessions?.getAll) {
-      console.error('window.api.sessions.getAll is not available');
-      return;
+    const allSessions: Session[] = [];
+
+    // Load URL recording sessions (rrweb)
+    if (window.api?.sessions?.getAll) {
+      try {
+        const urlSessions = await window.api.sessions.getAll();
+        allSessions.push(...urlSessions);
+      } catch (err) {
+        console.error('Failed to load URL sessions:', err);
+      }
     }
-    const allSessions = await window.api.sessions.getAll();
+
+    // Load desktop recording sessions from indexer
+    if (window.api?.indexer?.list) {
+      try {
+        const result = await window.api.indexer.list({}, 1, 100);
+        const desktopSessions = result.recordings.map((rec: {
+          id: string;
+          filename: string;
+          startTime: number;
+          duration: number;
+          filePath: string;
+          thumbnailBase64?: string;
+          resolution?: string;
+        }) => ({
+          id: rec.id,
+          name: rec.filename.replace('.webm', ''),
+          timestamp: rec.startTime,
+          duration: rec.duration,
+          eventCount: 0,
+          isDesktopRecording: true,
+          filePath: rec.filePath,
+          thumbnailBase64: rec.thumbnailBase64,
+          resolution: rec.resolution
+        }));
+        allSessions.push(...desktopSessions);
+      } catch (err) {
+        console.error('Failed to load desktop recordings:', err);
+      }
+    }
+
+    // Sort by timestamp descending (newest first)
+    allSessions.sort((a, b) => b.timestamp - a.timestamp);
     setSessions(allSessions);
   }, []);
 
@@ -100,7 +143,18 @@ function App(): JSX.Element {
   };
 
   const handleDelete = async (id: string) => {
-    const confirmed = await window.api.sessions.delete(id);
+    // Check if this is a desktop recording
+    const session = sessions.find(s => s.id === id);
+    let confirmed = false;
+
+    if (session?.isDesktopRecording && window.api?.indexer?.delete) {
+      // Delete from indexer (desktop recordings)
+      confirmed = await window.api.indexer.delete(id);
+    } else {
+      // Delete from sessions (URL recordings)
+      confirmed = await window.api.sessions.delete(id);
+    }
+
     if (confirmed) {
       if (selectedSession?.id === id) {
         setSelectedSession(null);
@@ -111,7 +165,17 @@ function App(): JSX.Element {
   };
 
   const handlePlay = async (session: Session) => {
-    // Load full session with events
+    if (session.isDesktopRecording && session.filePath) {
+      // For desktop recordings, open the video file with system player
+      if (window.api?.shell?.openPath) {
+        await window.api.shell.openPath(session.filePath);
+      } else {
+        console.error('Cannot open video file - shell.openPath not available');
+      }
+      return;
+    }
+
+    // Load full session with events (URL recordings)
     const fullSession = await window.api.sessions.get(session.id);
     if (fullSession && fullSession.events) {
       setPlayingSession(fullSession);

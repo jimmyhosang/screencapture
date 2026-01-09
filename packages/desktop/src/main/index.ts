@@ -401,6 +401,11 @@ function setupIpcHandlers(): void {
     return result.canceled ? null : result.filePaths[0] || null;
   });
 
+  // Shell handler - open file with system default app
+  ipcMain.handle('shell:openPath', async (_, path: string): Promise<string> => {
+    return shell.openPath(path);
+  });
+
   // Settings handlers
   ipcMain.handle('settings:get', (): AppSettings => {
     const stmt = db.prepare('SELECT value FROM settings WHERE key = ?');
