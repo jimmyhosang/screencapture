@@ -38,6 +38,16 @@ import type {
   CCaaSEvent,
   CallState
 } from '../main/ccaas/types';
+import type {
+  SourceInfo,
+  RecordingResult,
+  RecordingState,
+  WindowActivity
+} from '../main/services/screen-recorder';
+import type {
+  ManagedRecording,
+  RecordingManagerConfig
+} from '../main/services/recording-manager';
 
 // Expose protected methods that allow the renderer process to use
 // ipcRenderer without exposing the entire object
@@ -442,6 +452,24 @@ const api = {
       ipcRenderer.removeAllListeners('ccaas:recordingStart');
       ipcRenderer.removeAllListeners('ccaas:recordingStop');
     }
+  },
+
+  // Recording Manager (screen capture with desktopCapturer)
+  recordingManager: {
+    getSources: (): Promise<SourceInfo[]> =>
+      ipcRenderer.invoke('recordingManager:getSources'),
+    startForCall: (callId: string, agentId: string, sourceId?: string): Promise<string | null> =>
+      ipcRenderer.invoke('recordingManager:startForCall', callId, agentId, sourceId),
+    stopForCall: (callId: string): Promise<RecordingResult | null> =>
+      ipcRenderer.invoke('recordingManager:stopForCall', callId),
+    getForCall: (callId: string): Promise<ManagedRecording | null> =>
+      ipcRenderer.invoke('recordingManager:getForCall', callId),
+    getActive: (): Promise<ManagedRecording[]> =>
+      ipcRenderer.invoke('recordingManager:getActive'),
+    getConfig: (): Promise<RecordingManagerConfig> =>
+      ipcRenderer.invoke('recordingManager:getConfig'),
+    updateConfig: (config: Partial<RecordingManagerConfig>): Promise<RecordingManagerConfig> =>
+      ipcRenderer.invoke('recordingManager:updateConfig', config)
   }
 };
 

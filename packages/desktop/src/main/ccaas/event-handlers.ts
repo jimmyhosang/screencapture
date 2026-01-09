@@ -14,9 +14,8 @@ import {
   CCaaSWebhookConfig
 } from './types';
 import { getCallStateManager } from './call-state';
+import { getRecordingManager } from '../services/recording-manager';
 
-// Import from recorder module - we'll need to expose these functions
-// For now, we track state and emit events for the main process to handle
 interface RecordingResult {
   success: boolean;
   sessionId?: string;
@@ -181,51 +180,68 @@ async function handleCallTransferred(
 }
 
 /**
- * Start recording for a call
- * This creates a minimal recording session linked to the call
+ * Start recording for a call using the RecordingManager
  */
 async function startRecordingForCall(event: CallStartedEvent): Promise<RecordingResult> {
-  // Get the main window to notify about recording start
-  const mainWindow = BrowserWindow.getAllWindows().find((w) => !w.isDestroyed());
+  try {
+    const recordingManager = getRecordingManager();
+    const recordingId = await recordingManager.startRecordingForCall(
+      event.callId,
+      event.agentId
+    );
 
-  if (!mainWindow) {
-    return { success: false, error: 'No main window available' };
+    if (recordingId) {
+      // Notify renderer about recording start
+      const mainWindow = BrowserWindow.getAllWindows().find((w) => !w.isDestroyed());
+      if (mainWindow) {
+        mainWindow.webContents.send('ccaas:recordingStart', {
+          sessionId: recordingId,
+          callId: event.callId,
+          agentId: event.agentId,
+          direction: event.direction,
+          customerId: event.customerId,
+          timestamp: event.timestamp
+        });
+      }
+
+      return { success: true, sessionId: recordingId };
+    } else {
+      return { success: false, error: 'Failed to start recording' };
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return { success: false, error: errorMessage };
   }
-
-  // Generate a session ID for the recording
-  const sessionId = `ccaas-${event.callId}-${Date.now()}`;
-
-  // Notify the renderer to start recording
-  mainWindow.webContents.send('ccaas:recordingStart', {
-    sessionId,
-    callId: event.callId,
-    agentId: event.agentId,
-    direction: event.direction,
-    customerId: event.customerId,
-    timestamp: event.timestamp
-  });
-
-  return { success: true, sessionId };
 }
 
 /**
- * Stop recording for a call
+ * Stop recording for a call using the RecordingManager
  */
 async function stopRecordingForCall(callId: string, sessionId: string): Promise<RecordingResult> {
-  const mainWindow = BrowserWindow.getAllWindows().find((w) => !w.isDestroyed());
+  try {
+    const recordingManager = getRecordingManager();
+    const result = await recordingManager.stopRecordingForCall(callId);
 
-  if (!mainWindow) {
-    return { success: false, error: 'No main window available' };
+    // Notify renderer about recording stop
+    const mainWindow = BrowserWindow.getAllWindows().find((w) => !w.isDestroyed());
+    if (mainWindow) {
+      mainWindow.webContents.send('ccaas:recordingStop', {
+        sessionId,
+        callId,
+        timestamp: new Date().toISOString(),
+        result: result ? {
+          filePath: result.filePath,
+          duration: result.duration,
+          fileSize: result.fileSize
+        } : null
+      });
+    }
+
+    return { success: true, sessionId };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return { success: false, error: errorMessage };
   }
-
-  // Notify the renderer to stop recording
-  mainWindow.webContents.send('ccaas:recordingStop', {
-    sessionId,
-    callId,
-    timestamp: new Date().toISOString()
-  });
-
-  return { success: true, sessionId };
 }
 
 /**

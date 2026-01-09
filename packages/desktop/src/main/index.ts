@@ -9,6 +9,7 @@ import { setupRedactionHandlers } from './redaction';
 import { setupPerformanceHandlers } from './performance';
 import { setupTaskHandlers } from './workers/taskManager';
 import { setupCCaaSHandlers, initCCaaS, cleanupCCaaS } from './ccaas';
+import { setupRecordingManagerHandlers, shutdownRecordingManager } from './services';
 import type { SessionRecord, SessionStats, AppSettings } from './types';
 
 let mainWindow: BrowserWindow | null = null;
@@ -453,6 +454,7 @@ app.whenReady().then(() => {
   setupPerformanceHandlers();
   setupTaskHandlers();
   setupCCaaSHandlers();
+  setupRecordingManagerHandlers();
   setupKeyboardShortcuts();
 
   // Create window and tray
@@ -474,8 +476,9 @@ app.on('window-all-closed', () => {
   }
 });
 
-app.on('before-quit', () => {
+app.on('before-quit', async () => {
   app.isQuitting = true;
   globalShortcut.unregisterAll();
+  await shutdownRecordingManager();
   cleanupCCaaS();
 });
