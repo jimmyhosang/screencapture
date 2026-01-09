@@ -1039,6 +1039,29 @@ const api = {
       ipcRenderer.invoke('sessionManager:getActive'),
     isRecording: (): Promise<boolean> =>
       ipcRenderer.invoke('sessionManager:isRecording'),
+    // Auto-redaction config
+    getAutoRedactionConfig: (): Promise<{
+      enabled: boolean;
+      frameInterval: number;
+      piiTypes: string[];
+      style: 'blur' | 'solid';
+      solidColor: string;
+      keepOriginal: boolean;
+      minConfidence: 'high' | 'medium' | 'low';
+    }> =>
+      ipcRenderer.invoke('sessionManager:getAutoRedactionConfig'),
+    setAutoRedactionConfig: (config: Partial<{
+      enabled: boolean;
+      frameInterval: number;
+      piiTypes: string[];
+      style: 'blur' | 'solid';
+      solidColor: string;
+      keepOriginal: boolean;
+      minConfidence: 'high' | 'medium' | 'low';
+    }>): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke('sessionManager:setAutoRedactionConfig', config),
+    isAutoRedactionEnabled: (): Promise<boolean> =>
+      ipcRenderer.invoke('sessionManager:isAutoRedactionEnabled'),
     // Event listeners
     onStarting: (callback: (data: { sessionId: string }) => void): void => {
       ipcRenderer.on('sessionManager:session:starting', (_, data) => callback(data));
@@ -1069,6 +1092,20 @@ const api = {
     }) => void): void => {
       ipcRenderer.on('sessionManager:session:progress', (_, data) => callback(data));
     },
+    onRedacting: (callback: (data: { sessionId: string; message: string }) => void): void => {
+      ipcRenderer.on('sessionManager:session:redacting', (_, data) => callback(data));
+    },
+    onRedactionProgress: (callback: (data: {
+      sessionId: string;
+      stage: 'extracting' | 'analyzing' | 'redacting' | 'complete' | 'error';
+      progress: number;
+      framesAnalyzed: number;
+      totalFrames: number;
+      piiFound: number;
+      message: string;
+    }) => void): void => {
+      ipcRenderer.on('sessionManager:session:redactionProgress', (_, data) => callback(data));
+    },
     removeAllListeners: (): void => {
       ipcRenderer.removeAllListeners('sessionManager:session:starting');
       ipcRenderer.removeAllListeners('sessionManager:session:started');
@@ -1078,6 +1115,8 @@ const api = {
       ipcRenderer.removeAllListeners('sessionManager:session:stopped');
       ipcRenderer.removeAllListeners('sessionManager:session:error');
       ipcRenderer.removeAllListeners('sessionManager:session:progress');
+      ipcRenderer.removeAllListeners('sessionManager:session:redacting');
+      ipcRenderer.removeAllListeners('sessionManager:session:redactionProgress');
     }
   },
 

@@ -23,6 +23,16 @@ interface RedactionConfig {
   smoothEdges: boolean;
 }
 
+interface AutoRedactionConfig {
+  enabled: boolean;
+  frameInterval: number;
+  piiTypes: string[];
+  style: 'blur' | 'solid';
+  solidColor: string;
+  keepOriginal: boolean;
+  minConfidence: 'high' | 'medium' | 'low';
+}
+
 // PII type information
 const PII_TYPES = [
   { id: 'ssn', name: 'Social Security Number', description: 'US SSN format (XXX-XX-XXXX)' },
@@ -67,8 +77,18 @@ function RedactionSettings(): JSX.Element {
     smoothEdges: true,
   });
 
+  const [autoConfig, setAutoConfig] = useState<AutoRedactionConfig>({
+    enabled: false,
+    frameInterval: 1.0,
+    piiTypes: ['ssn', 'creditCard', 'email', 'phone', 'apiKey'],
+    style: 'solid',
+    solidColor: 'black',
+    keepOriginal: false,
+    minConfidence: 'medium',
+  });
+
   const [saved, setSaved] = useState(false);
-  const [activeTab, setActiveTab] = useState<'mode' | 'style' | 'pii'>('mode');
+  const [activeTab, setActiveTab] = useState<'mode' | 'style' | 'pii' | 'auto'>('auto');
 
   useEffect(() => {
     loadSettings();
@@ -80,6 +100,12 @@ function RedactionSettings(): JSX.Element {
       const loadedConfig = await window.api.redaction.getConfig();
       setMode(loadedMode);
       setConfig(loadedConfig);
+
+      // Load auto-redaction config
+      if (window.api.sessionManager?.getAutoRedactionConfig) {
+        const loadedAutoConfig = await window.api.sessionManager.getAutoRedactionConfig();
+        setAutoConfig(loadedAutoConfig);
+      }
     } catch (error) {
       console.error('Failed to load redaction settings:', error);
     }
@@ -89,6 +115,12 @@ function RedactionSettings(): JSX.Element {
     try {
       await window.api.redaction.setMode(mode);
       await window.api.redaction.setConfig(config);
+
+      // Save auto-redaction config
+      if (window.api.sessionManager?.setAutoRedactionConfig) {
+        await window.api.sessionManager.setAutoRedactionConfig(autoConfig);
+      }
+
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (error) {
@@ -119,6 +151,15 @@ function RedactionSettings(): JSX.Element {
     }));
   };
 
+  const toggleAutoPIIType = (typeId: string) => {
+    setAutoConfig((prev) => ({
+      ...prev,
+      piiTypes: prev.piiTypes.includes(typeId)
+        ? prev.piiTypes.filter((t) => t !== typeId)
+        : [...prev.piiTypes, typeId],
+    }));
+  };
+
   return (
     <div className="redaction-settings">
       <div className="settings-header">
@@ -130,6 +171,12 @@ function RedactionSettings(): JSX.Element {
 
       {/* Tab Navigation */}
       <div className="settings-tabs">
+        <button
+          className={`tab ${activeTab === 'auto' ? 'active' : ''}`}
+          onClick={() => setActiveTab('auto')}
+        >
+          Auto-Redact
+        </button>
         <button
           className={`tab ${activeTab === 'mode' ? 'active' : ''}`}
           onClick={() => setActiveTab('mode')}
@@ -149,6 +196,118 @@ function RedactionSettings(): JSX.Element {
           PII Types
         </button>
       </div>
+
+      {/* Auto-Redact Tab */}
+      {activeTab === 'auto' && (
+        <div className="settings-panel">
+          <div className="info-box" style={{ marginBottom: '16px', backgroundColor: 'var(--bg-warning, #fef3cd)', borderColor: 'var(--border-warning, #ffc107)' }}>
+            <strong>Automatic Post-Recording Redaction</strong>
+            <p style={{ marginTop: '8px', marginBottom: 0, fontSize: '0.85rem' }}>
+              When enabled, recordings will be automatically scanned for PII (SSN, credit cards, emails, etc.)
+              after capture and sensitive information will be redacted before the file is saved.
+            </p>
+          </div>
+
+          <div className="setting-row">
+            <div>
+              <div className="setting-label">Enable Auto-Redaction</div>
+              <div className="setting-description">Automatically scan and redact PII after each recording</div>
+            </div>
+            <div
+              className={`toggle ${autoConfig.enabled ? 'active' : ''}`}
+              onClick={() => setAutoConfig((prev) => ({ ...prev, enabled: !prev.enabled }))}
+            />
+          </div>
+
+          {autoConfig.enabled && (
+            <>
+              <div className="setting-row">
+                <div>
+                  <div className="setting-label">Scan Interval</div>
+                  <div className="setting-description">How often to analyze frames (in seconds)</div>
+                </div>
+                <select
+                  value={autoConfig.frameInterval}
+                  onChange={(e) => setAutoConfig((prev) => ({ ...prev, frameInterval: parseFloat(e.target.value) }))}
+                  className="setting-select"
+                >
+                  <option value={0.5}>Every 0.5s (thorough, slower)</option>
+                  <option value={1}>Every 1s (balanced)</option>
+                  <option value={2}>Every 2s (faster)</option>
+                  <option value={5}>Every 5s (quick scan)</option>
+                </select>
+              </div>
+
+              <div className="setting-row">
+                <div>
+                  <div className="setting-label">Redaction Style</div>
+                  <div className="setting-description">How PII areas appear in the video</div>
+                </div>
+                <select
+                  value={autoConfig.style}
+                  onChange={(e) => setAutoConfig((prev) => ({ ...prev, style: e.target.value as 'blur' | 'solid' }))}
+                  className="setting-select"
+                >
+                  <option value="solid">Solid Black Box</option>
+                  <option value="blur">Blur</option>
+                </select>
+              </div>
+
+              <div className="setting-row">
+                <div>
+                  <div className="setting-label">Detection Confidence</div>
+                  <div className="setting-description">Minimum confidence for PII detection</div>
+                </div>
+                <select
+                  value={autoConfig.minConfidence}
+                  onChange={(e) => setAutoConfig((prev) => ({ ...prev, minConfidence: e.target.value as 'high' | 'medium' | 'low' }))}
+                  className="setting-select"
+                >
+                  <option value="high">High (fewer false positives)</option>
+                  <option value="medium">Medium (balanced)</option>
+                  <option value="low">Low (catch more PII)</option>
+                </select>
+              </div>
+
+              <div className="setting-row">
+                <div>
+                  <div className="setting-label">Keep Original</div>
+                  <div className="setting-description">Save both original and redacted versions</div>
+                </div>
+                <div
+                  className={`toggle ${autoConfig.keepOriginal ? 'active' : ''}`}
+                  onClick={() => setAutoConfig((prev) => ({ ...prev, keepOriginal: !prev.keepOriginal }))}
+                />
+              </div>
+
+              <div style={{ marginTop: '16px' }}>
+                <div className="setting-label" style={{ marginBottom: '12px' }}>PII Types to Detect</div>
+                <div className="pii-types-list">
+                  {PII_TYPES.slice(0, 5).map((type) => (
+                    <div
+                      key={type.id}
+                      className={`pii-type-item ${autoConfig.piiTypes.includes(type.id) ? 'selected' : ''}`}
+                      onClick={() => toggleAutoPIIType(type.id)}
+                    >
+                      <div className="pii-type-checkbox">
+                        {autoConfig.piiTypes.includes(type.id) && (
+                          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                          </svg>
+                        )}
+                      </div>
+                      <div className="pii-type-info">
+                        <div className="pii-type-name">{type.name}</div>
+                        <div className="pii-type-description">{type.description}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Mode Tab */}
       {activeTab === 'mode' && (

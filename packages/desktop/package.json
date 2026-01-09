@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "@ffprobe-installer/ffprobe": "^2.1.2",
     "@screencapture/core": "workspace:*",
     "@types/uuid": "^11.0.0",
     "active-win": "^9.0.0",

@@ -31,6 +31,14 @@ import type {
 import { getActiveWindowTracker } from '../tracking';
 import { getRecordingsPath } from '../database';
 import { getRecordingIndexer } from './recording-indexer';
+import {
+  getAutoRedactionService,
+  getAutoRedactionConfig,
+  setAutoRedactionConfig,
+  isAutoRedactionEnabled,
+  type AutoRedactionConfig,
+  type RedactionProgress
+} from './auto-redaction';
 
 // =============================================================================
 // Types
@@ -58,6 +66,9 @@ export interface SessionRecordingConfig {
   metadata?: Record<string, unknown>;
   callId?: string;
   agentId?: string;
+
+  // Auto-redaction
+  autoRedaction?: Partial<AutoRedactionConfig>;
 }
 
 export interface SessionRecordingState {
@@ -85,6 +96,11 @@ export interface SessionRecordingResult {
   windowChangeCount: number;
   resolution: { width: number; height: number };
   metadata?: Record<string, unknown>;
+  redaction?: {
+    enabled: boolean;
+    piiRegionsFound: number;
+    processingTimeMs: number;
+  };
 }
 
 export type SessionEventType =
@@ -333,7 +349,51 @@ export class SessionRecordingManager extends EventEmitter {
 
       state.status = 'stopped';
 
-      // 6. Index the recording so it appears in the session list
+      // 6. Apply auto-redaction if enabled
+      let redactionInfo: SessionRecordingResult['redaction'];
+      if (isAutoRedactionEnabled() || state.config.autoRedaction?.enabled) {
+        try {
+          console.log(`[SessionManager] Running auto-redaction on ${captureResult.filePath}`);
+          this.notifyRenderer('session:redacting', { sessionId, message: 'Analyzing for PII...' });
+
+          const redactionService = getAutoRedactionService();
+
+          // Set up progress callback
+          redactionService.onProgress((progress: RedactionProgress) => {
+            this.notifyRenderer('session:redactionProgress', {
+              sessionId,
+              ...progress
+            });
+          });
+
+          const redactionResult = await redactionService.processVideo(
+            captureResult.filePath,
+            { enabled: true, ...state.config.autoRedaction }
+          );
+
+          redactionInfo = {
+            enabled: true,
+            piiRegionsFound: redactionResult.piiRegionsFound,
+            processingTimeMs: redactionResult.processingTimeMs,
+          };
+
+          if (redactionResult.piiRegionsFound > 0) {
+            console.log(`[SessionManager] Redacted ${redactionResult.piiRegionsFound} PII regions`);
+          } else {
+            console.log(`[SessionManager] No PII found in recording`);
+          }
+        } catch (redactionError) {
+          console.error(`[SessionManager] Auto-redaction failed:`, redactionError);
+          // Don't throw - recording was still successful, just not redacted
+          redactionInfo = {
+            enabled: true,
+            piiRegionsFound: 0,
+            processingTimeMs: 0,
+          };
+        }
+      }
+
+      // 7. Index the recording so it appears in the session list
       try {
         const indexer = getRecordingIndexer();
         await indexer.indexRecording(captureResult.filePath);
@@ -341,6 +401,11 @@ export class SessionRecordingManager extends EventEmitter {
       } catch (indexError) {
         console.error(`[SessionManager] Failed to index recording:`, indexError);
         // Don't throw - recording was still successful, just not indexed
+      }
+
+      // Add redaction info to result
+      if (redactionInfo) {
+        result.redaction = redactionInfo;
       }
 
       this.emit('session:stopped', { sessionId, result });
@@ -618,6 +683,22 @@ export class SessionRecordingManager extends EventEmitter {
     // Check if recording
     ipcMain.handle('sessionManager:isRecording', async () => {
       return this.isRecording();
+    });
+
+    // Get auto-redaction config
+    ipcMain.handle('sessionManager:getAutoRedactionConfig', async () => {
+      return getAutoRedactionConfig();
+    });
+
+    // Set auto-redaction config
+    ipcMain.handle('sessionManager:setAutoRedactionConfig', async (_, config: Partial<AutoRedactionConfig>) => {
+      setAutoRedactionConfig(config);
+      return { success: true };
+    });
+
+    // Check if auto-redaction is enabled
+    ipcMain.handle('sessionManager:isAutoRedactionEnabled', async () => {
+      return isAutoRedactionEnabled();
     });
   }
 }
