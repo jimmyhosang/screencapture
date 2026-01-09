@@ -6,6 +6,7 @@ import Settings from './components/Settings';
 import RecordingControls from './components/RecordingControls';
 import DesktopCaptureControls from './components/DesktopCaptureControls';
 import OCRTestMode from './components/OCRTestMode';
+import { initializeMediaCapture, cleanupMediaCapture } from './services/media-capture';
 
 type View = 'dashboard' | 'settings' | 'record';
 type RecordMode = 'url' | 'desktop';
@@ -63,6 +64,9 @@ function App(): JSX.Element {
     loadSessions();
     loadStats();
 
+    // Initialize media capture service for desktop recording
+    initializeMediaCapture();
+
     // Listen for import events from tray
     if (window.api?.on?.importSessionFile) {
       window.api.on.importSessionFile(async (filePath: string) => {
@@ -73,6 +77,11 @@ function App(): JSX.Element {
         }
       });
     }
+
+    // Cleanup on unmount
+    return () => {
+      cleanupMediaCapture();
+    };
   }, [loadSessions, loadStats]);
 
   const handleImport = async () => {
