@@ -19,6 +19,12 @@ function formatTime(seconds: number): string {
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
+interface OcrStatus {
+  status: 'not_started' | 'queued' | 'processing' | 'completed' | 'failed';
+  progress?: number;
+  message?: string;
+}
+
 function VideoPlayer({ recording, onClose }: VideoPlayerProps): JSX.Element {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -27,6 +33,51 @@ function VideoPlayer({ recording, onClose }: VideoPlayerProps): JSX.Element {
   const [playbackRate, setPlaybackRate] = useState(1);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
+  const [ocrStatus, setOcrStatus] = useState<OcrStatus>({ status: 'not_started' });
+
+  // Check OCR status on mount
+  useEffect(() => {
+    const checkOcrStatus = async () => {
+      if (!window.api?.ocrProcessor?.getReportByRecording) return;
+
+      try {
+        const report = await window.api.ocrProcessor.getReportByRecording(recording.id);
+        if (report) {
+          setOcrStatus({
+            status: report.status as OcrStatus['status'],
+            progress: report.progress,
+            message: report.status === 'completed' ? 'OCR completed - Redaction available' : undefined
+          });
+        } else {
+          setOcrStatus({ status: 'not_started', message: 'OCR not yet processed' });
+        }
+      } catch (error) {
+        console.error('[VideoPlayer] Failed to check OCR status:', error);
+      }
+    };
+
+    checkOcrStatus();
+
+    // Listen for OCR progress updates
+    if (window.api?.ocrProcessor?.onProgress) {
+      const progressListener = (data: { recordingId: string; status: string; progress: number; message?: string }) => {
+        if (data.recordingId === recording.id) {
+          setOcrStatus({
+            status: data.status as OcrStatus['status'],
+            progress: data.progress,
+            message: data.message
+          });
+        }
+      };
+      window.api.ocrProcessor.onProgress(progressListener);
+
+      return () => {
+        if (window.api?.ocrProcessor?.removeProgressListener) {
+          window.api.ocrProcessor.removeProgressListener();
+        }
+      };
+    }
+  }, [recording.id]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -144,6 +195,27 @@ function VideoPlayer({ recording, onClose }: VideoPlayerProps): JSX.Element {
           <h3>{recording.filename}</h3>
           <div className="video-player-info">
             <span>{recording.resolution}</span>
+            {/* OCR/Redaction Status */}
+            {ocrStatus.status === 'processing' && (
+              <span style={{ marginLeft: '12px', color: '#f59e0b', fontSize: '0.875rem' }}>
+                🔄 Processing OCR... {ocrStatus.progress?.toFixed(0)}%
+              </span>
+            )}
+            {ocrStatus.status === 'completed' && (
+              <span style={{ marginLeft: '12px', color: '#10b981', fontSize: '0.875rem' }}>
+                ✓ Redaction ready
+              </span>
+            )}
+            {ocrStatus.status === 'queued' && (
+              <span style={{ marginLeft: '12px', color: '#6b7280', fontSize: '0.875rem' }}>
+                ⏳ OCR queued...
+              </span>
+            )}
+            {ocrStatus.status === 'not_started' && (
+              <span style={{ marginLeft: '12px', color: '#6b7280', fontSize: '0.875rem' }}>
+                ℹ️ No redaction - OCR processing in background
+              </span>
+            )}
           </div>
           <button className="btn btn-secondary" onClick={onClose}>
             ✕ Close (Esc)
@@ -153,8 +225,21 @@ function VideoPlayer({ recording, onClose }: VideoPlayerProps): JSX.Element {
         <div className="video-wrapper" onClick={togglePlayPause}>
           <video
             ref={videoRef}
-            src={`file://${recording.filePath}`}
+            src={`media://${recording.filePath}`}
             className="video-element"
+            onError={(e) => {
+              console.error('[VideoPlayer] Video load error:', e);
+              const video = e.currentTarget;
+              console.error('[VideoPlayer] Error details:', {
+                error: video.error,
+                networkState: video.networkState,
+                readyState: video.readyState,
+                src: video.src,
+                originalPath: recording.filePath
+              });
+            }}
+            onLoadedMetadata={() => console.log('[VideoPlayer] Video metadata loaded')}
+            onCanPlay={() => console.log('[VideoPlayer] Video can play')}
           />
           {!isPlaying && (
             <div className="play-overlay">

@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage, globalShortcut } from 'electron';
+import { app, shell, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage, globalShortcut, protocol } from 'electron';
 import { join } from 'path';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import { initDatabase, getDatabase } from './database';
@@ -26,6 +26,20 @@ import {
 } from './services';
 import type { SessionRecord, SessionStats, AppSettings } from './types';
 
+// Register protocol before app is ready
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'media',
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      stream: true,
+      bypassCSP: true
+    }
+  }
+]);
+
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 
@@ -41,12 +55,17 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/index.mjs'),
       sandbox: false,
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      webSecurity: false // Allow loading local video files
     }
   });
 
   mainWindow.on('ready-to-show', () => {
     mainWindow?.show();
+    // Open DevTools in development mode
+    if (is.dev) {
+      mainWindow?.webContents.openDevTools();
+    }
   });
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -455,6 +474,18 @@ declare module 'electron' {
 app.whenReady().then(() => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.screencapture.desktop');
+
+  // Register custom protocol for serving local video files
+  protocol.registerFileProtocol('media', (request, callback) => {
+    let filePath = request.url.replace('media://', '');
+    filePath = decodeURI(filePath);
+    // Ensure absolute path starts with /
+    if (!filePath.startsWith('/')) {
+      filePath = '/' + filePath;
+    }
+    console.log('[Protocol] Serving file:', filePath);
+    callback({ path: filePath });
+  });
 
   // Default open or close DevTools by F12 in development
   app.on('browser-window-created', (_, window) => {
