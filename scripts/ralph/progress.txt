@@ -1,0 +1,44 @@
+# Ralph Progress Log
+Started: 2026-01-09
+---
+
+## Codebase Patterns
+
+### Project Structure
+- Monorepo with packages: desktop (Electron), extension (Chrome), core (shared utils)
+- Desktop app uses electron-vite for build tooling
+- Main process code in `packages/desktop/src/main/`
+- Renderer (React) code in `packages/desktop/src/renderer/src/`
+- Preload bridge in `packages/desktop/src/preload/index.ts`
+
+### IPC Communication
+- IPC handlers defined in module-specific files (e.g., `main/ocr/index.ts`)
+- Handler naming convention: `module:action` (e.g., `sessions:getAll`, `ocr:processFrame`)
+- All handlers use `ipcMain.handle()` for async operations
+- Preload exposes API via `contextBridge.exposeInMainWorld('api', api)`
+
+### Adding New Features
+1. Create service in `main/[module]/` with business logic
+2. Add IPC handlers in `main/[module]/index.ts`
+3. Export setup function and call it from `main/index.ts`
+4. Add API methods to `preload/index.ts`
+5. Create React component in `renderer/src/components/`
+6. Add CSS styles to `renderer/src/styles/index.css`
+
+### Build & Test
+- Build command: `cd packages/desktop && npm run build`
+- Dev server: `cd packages/desktop && npm run dev`
+- Build outputs to `packages/desktop/out/`
+
+### CSS Conventions
+- CSS variables defined in `:root` (--bg-primary, --text-primary, --accent, etc.)
+- Component styles grouped with section comments
+- BEM-like naming: `.component-name`, `.component-name-element`
+
+### Type Safety
+- Strict TypeScript enabled
+- Types defined in `main/types.ts` for shared types
+- Module-specific types in `main/[module]/types.ts`
+- Import types in preload for proper typing
+
+---

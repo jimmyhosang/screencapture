@@ -1,0 +1,135 @@
+{
+  "projectName": "Screencapture Continuous Improvement",
+  "description": "Ongoing improvements to the screencapture platform including bug fixes, feature enhancements, and code quality improvements",
+  "branchName": "ralph/continuous-improvement",
+  "userStories": [
+    {
+      "id": "SC-001",
+      "title": "Add TypeScript declaration file for window.api",
+      "description": "Create a global type declaration file that properly types window.api so components get full IntelliSense support",
+      "priority": 1,
+      "acceptanceCriteria": [
+        "Create src/renderer/src/types/api.d.ts with window.api types",
+        "Export Api type from preload and use it in declaration",
+        "All components should have proper type checking for window.api calls"
+      ],
+      "passes": false
+    },
+    {
+      "id": "SC-002",
+      "title": "Add error boundaries to React components",
+      "description": "Wrap major UI sections in error boundaries to prevent crashes from propagating",
+      "priority": 2,
+      "acceptanceCriteria": [
+        "Create ErrorBoundary component with fallback UI",
+        "Wrap Dashboard, SessionList, and PlayerModal in error boundaries",
+        "Display user-friendly error message with retry option"
+      ],
+      "passes": false
+    },
+    {
+      "id": "SC-003",
+      "title": "Add loading states to async operations",
+      "description": "Show loading indicators when fetching sessions, initializing OCR, or processing tasks",
+      "priority": 3,
+      "acceptanceCriteria": [
+        "Add loading spinner component",
+        "Show loading state in SessionList while fetching",
+        "Show loading state during OCR initialization",
+        "Disable buttons during async operations"
+      ],
+      "passes": false
+    },
+    {
+      "id": "SC-004",
+      "title": "Add notification system for user feedback",
+      "description": "Implement toast notifications for success/error messages",
+      "priority": 4,
+      "acceptanceCriteria": [
+        "Create Toast/Notification component",
+        "Show success toast when recording saves",
+        "Show error toast when operations fail",
+        "Auto-dismiss after configurable timeout"
+      ],
+      "passes": false
+    },
+    {
+      "id": "SC-005",
+      "title": "Add session search and filtering",
+      "description": "Allow users to search sessions by name and filter by date range",
+      "priority": 5,
+      "acceptanceCriteria": [
+        "Add search input to SessionList",
+        "Filter sessions by name as user types",
+        "Add date range filter dropdown",
+        "Persist filter state in component"
+      ],
+      "passes": false
+    },
+    {
+      "id": "SC-006",
+      "title": "Add recording duration display during capture",
+      "description": "Show elapsed time while recording is active",
+      "priority": 6,
+      "acceptanceCriteria": [
+        "Display recording duration in RecordingControls",
+        "Update duration every second",
+        "Format as MM:SS or HH:MM:SS for long recordings",
+        "Reset when recording stops"
+      ],
+      "passes": false
+    },
+    {
+      "id": "SC-007",
+      "title": "Add confirmation dialog for destructive actions",
+      "description": "Prompt user before deleting sessions or clearing data",
+      "priority": 7,
+      "acceptanceCriteria": [
+        "Create ConfirmDialog component",
+        "Show confirmation before session deletion",
+        "Show confirmation before clearing all sessions",
+        "Include cancel and confirm buttons"
+      ],
+      "passes": false
+    },
+    {
+      "id": "SC-008",
+      "title": "Add keyboard navigation to session list",
+      "description": "Allow arrow key navigation and Enter to select sessions",
+      "priority": 8,
+      "acceptanceCriteria": [
+        "Up/Down arrows navigate between sessions",
+        "Enter key opens selected session",
+        "Delete key prompts to delete selected session",
+        "Escape key clears selection"
+      ],
+      "passes": false
+    },
+    {
+      "id": "SC-009",
+      "title": "Add auto-save recovery for interrupted recordings",
+      "description": "Periodically save recording state so interrupted recordings can be recovered",
+      "priority": 9,
+      "acceptanceCriteria": [
+        "Save recording state every 30 seconds to temp storage",
+        "On app start, check for recovery data",
+        "Prompt user to recover interrupted recording",
+        "Clean up temp data after successful save"
+      ],
+      "passes": false
+    },
+    {
+      "id": "SC-010",
+      "title": "Add export format options",
+      "description": "Allow exporting sessions in multiple formats (JSON, CSV metadata, video)",
+      "priority": 10,
+      "acceptanceCriteria": [
+        "Add format dropdown to export dialog",
+        "Support JSON export (existing)",
+        "Support CSV export of session metadata",
+        "Show format-specific options"
+      ],
+      "passes": false
+    }
+  ]
+}
