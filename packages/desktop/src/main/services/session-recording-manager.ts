@@ -31,6 +31,7 @@ import type {
 import { getActiveWindowTracker } from '../tracking';
 import { getRecordingsPath } from '../database';
 import { getRecordingIndexer } from './recording-indexer';
+import { getOcrProcessor } from './ocr-processor';
 import {
   getAutoRedactionService,
   getAutoRedactionConfig,
@@ -398,13 +399,32 @@ export class SessionRecordingManager extends EventEmitter {
       }
 
       // 7. Index the recording so it appears in the session list
+      let recordingId: string | null = null;
       try {
         const indexer = getRecordingIndexer();
-        await indexer.indexRecording(captureResult.filePath);
+        const indexed = await indexer.indexRecording(captureResult.filePath);
+        if (indexed) {
+          recordingId = indexed.id;
+        }
         console.log(`[SessionManager] Recording indexed: ${captureResult.filePath}`);
       } catch (indexError) {
         console.error(`[SessionManager] Failed to index recording:`, indexError);
         // Don't throw - recording was still successful, just not indexed
+      }
+
+      // 8. Queue OCR processing for redaction overlay
+      if (recordingId) {
+        try {
+          const ocrProcessor = getOcrProcessor();
+          const jobId = ocrProcessor.queueRecording(recordingId, {
+            frameInterval: 1, // Extract frame every 1 second for better tracking
+            priority: 'normal'
+          });
+          console.log(`[SessionManager] Queued OCR processing: ${jobId} for recording: ${recordingId}`);
+        } catch (ocrError) {
+          console.error(`[SessionManager] Failed to queue OCR:`, ocrError);
+          // Don't throw - recording was still successful
+        }
       }
 
       // Add redaction info to result

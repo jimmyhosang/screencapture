@@ -27,6 +27,14 @@ A comprehensive screen recording and session replay platform with advanced priva
 - **App/Window Blocking**: Automatically blur specific applications (Slack, Discord, password managers)
 - **Redaction Profiles**: Save and share configurations with presets for HIPAA, Financial, and Demo modes
 
+### 🎯 Real-Time Redaction Playback
+- **Motion Interpolation**: Redaction boxes track content movement during video playback
+- **Frame Bracketing**: Intelligently finds OCR keyframes and interpolates positions between them
+- **Word Tracking**: Matches PII text across consecutive frames for smooth tracking
+- **CSS Transitions**: Smooth visual transitions for natural-looking redaction movement
+- **Auto-OCR Processing**: New recordings automatically queue OCR for immediate redaction support
+- **PII Pattern Support**: Emails, phone numbers, SSN, credit cards, IP addresses, dates
+
 ### 🖥️ Desktop Application
 - **Screen Recording**: Capture screens and windows with configurable quality
 - **OCR Text Detection**: Real-time text recognition for PII scanning

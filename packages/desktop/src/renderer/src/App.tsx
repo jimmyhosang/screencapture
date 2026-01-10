@@ -45,7 +45,7 @@ function App(): JSX.Element {
   const [stats, setStats] = useState<Stats | null>(null);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [playingSession, setPlayingSession] = useState<Session | null>(null);
-  const [playingVideo, setPlayingVideo] = useState<{ filePath: string; title: string } | null>(null);
+  const [playingVideo, setPlayingVideo] = useState<{ filePath: string; title: string; recordingId: string } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showOCRTest, setShowOCRTest] = useState(false);
 
@@ -171,7 +171,8 @@ function App(): JSX.Element {
       // For desktop recordings, use in-app video player
       setPlayingVideo({
         filePath: session.filePath,
-        title: session.name
+        title: session.name,
+        recordingId: session.id
       });
       return;
     }
@@ -330,6 +331,7 @@ function App(): JSX.Element {
         <VideoPlayerModal
           filePath={playingVideo.filePath}
           title={playingVideo.title}
+          recordingId={playingVideo.recordingId}
           onClose={() => setPlayingVideo(null)}
         />
       )}

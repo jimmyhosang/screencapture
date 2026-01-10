@@ -7,6 +7,7 @@
 
 import { useRef, useState, useEffect, useCallback } from 'react';
 import './EnhancedVideoPlayer.css';
+import RedactionOverlay from './RedactionOverlay';
 
 // Types
 interface WindowActivity {
@@ -57,6 +58,10 @@ export function EnhancedVideoPlayer({ recording, onClose }: EnhancedVideoPlayerP
   // Window activity
   const [windowActivity, setWindowActivity] = useState<WindowActivity[]>([]);
   const [currentActivity, setCurrentActivity] = useState<WindowActivity | null>(null);
+
+  // Video dimensions for redaction overlay
+  const [videoDimensions, setVideoDimensions] = useState({ width: 0, height: 0, displayWidth: 0, displayHeight: 0 });
+  const [redactionEnabled, setRedactionEnabled] = useState(true);
 
   // Controls hide timer
   const hideControlsTimer = useRef<NodeJS.Timeout | null>(null);
@@ -120,12 +125,26 @@ export function EnhancedVideoPlayer({ recording, onClose }: EnhancedVideoPlayerP
     video.addEventListener('pause', handlePause);
     video.addEventListener('ended', handleEnded);
 
+    // Track video resize for redaction overlay
+    const handleResize = () => {
+      setVideoDimensions({
+        width: video.videoWidth,
+        height: video.videoHeight,
+        displayWidth: video.clientWidth,
+        displayHeight: video.clientHeight
+      });
+    };
+    video.addEventListener('loadedmetadata', handleResize);
+    window.addEventListener('resize', handleResize);
+
     return () => {
       video.removeEventListener('timeupdate', handleTimeUpdate);
       video.removeEventListener('loadedmetadata', handleLoadedMetadata);
       video.removeEventListener('play', handlePlay);
       video.removeEventListener('pause', handlePause);
       video.removeEventListener('ended', handleEnded);
+      video.removeEventListener('loadedmetadata', handleResize);
+      window.removeEventListener('resize', handleResize);
     };
   }, []);
 
@@ -357,6 +376,22 @@ export function EnhancedVideoPlayer({ recording, onClose }: EnhancedVideoPlayerP
             src={`file://${recording.filePath}`}
             className="video-element"
           />
+
+          {/* Redaction Overlay */}
+          {videoDimensions.displayWidth > 0 && (
+            <RedactionOverlay
+              recordingId={recording.id}
+              currentTime={currentTime}
+              videoWidth={videoDimensions.displayWidth}
+              videoHeight={videoDimensions.displayHeight}
+              frameWidth={videoDimensions.width}
+              frameHeight={videoDimensions.height}
+              enabled={redactionEnabled}
+              style="blur"
+              blurRadius={10}
+              padding={4}
+            />
+          )}
 
           {/* Play overlay */}
           {!isPlaying && (

@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import './VideoPlayerModal.css';
+import RedactionOverlay from './RedactionOverlay';
 
 interface VideoPlayerModalProps {
   filePath: string;
   title: string;
+  recordingId: string;
   onClose: () => void;
 }
 
-function VideoPlayerModal({ filePath, title, onClose }: VideoPlayerModalProps): JSX.Element {
+function VideoPlayerModal({ filePath, title, recordingId, onClose }: VideoPlayerModalProps): JSX.Element {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -15,6 +17,8 @@ function VideoPlayerModal({ filePath, title, onClose }: VideoPlayerModalProps): 
   const [volume, setVolume] = useState(1);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [error, setError] = useState<string | null>(null);
+  const [videoDimensions, setVideoDimensions] = useState({ width: 0, height: 0, displayWidth: 0, displayHeight: 0 });
+  const [ocrReady, setOcrReady] = useState(false);
 
   // Convert file path to file:// URL
   const videoSrc = `file://${filePath}`;
@@ -30,12 +34,22 @@ function VideoPlayerModal({ filePath, title, onClose }: VideoPlayerModalProps): 
     const handleError = () => {
       setError('Failed to load video. The file may be corrupted or unavailable.');
     };
+    const handleLoadedMetadata = () => {
+      setVideoDimensions({
+        width: video.videoWidth,
+        height: video.videoHeight,
+        displayWidth: video.clientWidth,
+        displayHeight: video.clientHeight
+      });
+    };
 
     video.addEventListener('timeupdate', handleTimeUpdate);
     video.addEventListener('durationchange', handleDurationChange);
     video.addEventListener('play', handlePlay);
     video.addEventListener('pause', handlePause);
     video.addEventListener('error', handleError);
+    video.addEventListener('loadedmetadata', handleLoadedMetadata);
+    window.addEventListener('resize', handleLoadedMetadata);
 
     // Auto-play on mount
     video.play().catch(() => {
@@ -48,6 +62,8 @@ function VideoPlayerModal({ filePath, title, onClose }: VideoPlayerModalProps): 
       video.removeEventListener('play', handlePlay);
       video.removeEventListener('pause', handlePause);
       video.removeEventListener('error', handleError);
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      window.removeEventListener('resize', handleLoadedMetadata);
     };
   }, []);
 
@@ -133,12 +149,29 @@ function VideoPlayerModal({ filePath, title, onClose }: VideoPlayerModalProps): 
               <p className="error-path">{filePath}</p>
             </div>
           ) : (
-            <video
-              ref={videoRef}
-              src={videoSrc}
-              className="video-player"
-              onClick={togglePlayPause}
-            />
+            <div className="video-wrapper" style={{ position: 'relative' }}>
+              <video
+                ref={videoRef}
+                src={videoSrc}
+                className="video-player"
+                onClick={togglePlayPause}
+              />
+              {/* Redaction Overlay */}
+              {videoDimensions.displayWidth > 0 && (
+                <RedactionOverlay
+                  recordingId={recordingId}
+                  currentTime={currentTime}
+                  videoWidth={videoDimensions.displayWidth}
+                  videoHeight={videoDimensions.displayHeight}
+                  frameWidth={videoDimensions.width}
+                  frameHeight={videoDimensions.height}
+                  enabled={true}
+                  style="blur"
+                  blurRadius={15}
+                  padding={20}
+                />
+              )}
+            </div>
           )}
         </div>
 

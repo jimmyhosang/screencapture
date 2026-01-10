@@ -1,4 +1,5 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
+import RedactionOverlay from './RedactionOverlay';
 
 interface VideoRecording {
   id: string;
@@ -34,6 +35,9 @@ function VideoPlayer({ recording, onClose }: VideoPlayerProps): JSX.Element {
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
   const [ocrStatus, setOcrStatus] = useState<OcrStatus>({ status: 'not_started' });
+  const [videoDimensions, setVideoDimensions] = useState({ width: 0, height: 0, displayWidth: 0, displayHeight: 0 });
+  const [redactionEnabled, setRedactionEnabled] = useState(true);
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
   // Check OCR status on mount
   useEffect(() => {
@@ -222,7 +226,7 @@ function VideoPlayer({ recording, onClose }: VideoPlayerProps): JSX.Element {
           </button>
         </div>
 
-        <div className="video-wrapper" onClick={togglePlayPause}>
+        <div className="video-wrapper" ref={wrapperRef} onClick={togglePlayPause}>
           <video
             ref={videoRef}
             src={`media://${recording.filePath}`}
@@ -238,9 +242,35 @@ function VideoPlayer({ recording, onClose }: VideoPlayerProps): JSX.Element {
                 originalPath: recording.filePath
               });
             }}
-            onLoadedMetadata={() => console.log('[VideoPlayer] Video metadata loaded')}
+            onLoadedMetadata={(e) => {
+              console.log('[VideoPlayer] Video metadata loaded');
+              const video = e.currentTarget;
+              setVideoDimensions({
+                width: video.videoWidth,
+                height: video.videoHeight,
+                displayWidth: video.clientWidth,
+                displayHeight: video.clientHeight
+              });
+            }}
             onCanPlay={() => console.log('[VideoPlayer] Video can play')}
           />
+
+          {/* Redaction Overlay */}
+          {ocrStatus.status === 'completed' && videoDimensions.displayWidth > 0 && (
+            <RedactionOverlay
+              recordingId={recording.id}
+              currentTime={currentTime}
+              videoWidth={videoDimensions.displayWidth}
+              videoHeight={videoDimensions.displayHeight}
+              frameWidth={videoDimensions.width}
+              frameHeight={videoDimensions.height}
+              enabled={redactionEnabled}
+              style="blur"
+              blurRadius={10}
+              padding={4}
+            />
+          )}
+
           {!isPlaying && (
             <div className="play-overlay">
               <span className="play-button">▶</span>

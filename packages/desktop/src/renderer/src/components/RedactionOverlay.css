@@ -1,0 +1,71 @@
+/**
+ * Redaction Overlay Styles
+ */
+
+.redaction-overlay-container {
+    z-index: 10;
+}
+
+/* Base redaction box */
+.redaction-box {
+    transition: opacity 0.1s ease;
+    box-sizing: border-box;
+}
+
+/* Blur style */
+.redaction-box.style-blur {
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    background: rgba(0, 0, 0, 0.1);
+}
+
+/* Solid block style */
+.redaction-box.style-solid {
+    background: #000;
+}
+
+/* Pixelate style */
+.redaction-box.style-pixelate {
+    image-rendering: pixelated;
+    background:
+        conic-gradient(from 90deg at 1px 1px, #333 25%, #444 25%);
+    background-size: 4px 4px;
+}
+
+/* Pattern (diagonal lines) style */
+.redaction-box.style-pattern {
+    background: repeating-linear-gradient(45deg,
+            #1a1a2e,
+            #1a1a2e 2px,
+            #16213e 2px,
+            #16213e 4px);
+}
+
+/* Hover state for interactive redactions (when editing) */
+.redaction-box.interactive:hover {
+    outline: 2px solid var(--accent, #e94560);
+    cursor: pointer;
+}
+
+/* Selected state */
+.redaction-box.selected {
+    outline: 2px solid var(--accent, #e94560);
+    outline-offset: 1px;
+}
+
+/* Animation for newly added redactions */
+@keyframes redaction-appear {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.redaction-box.animate-in {
+    animation: redaction-appear 0.2s ease-out;
+}
