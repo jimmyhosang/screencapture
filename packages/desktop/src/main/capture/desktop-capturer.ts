@@ -7,9 +7,11 @@
 
 import { desktopCapturer, BrowserWindow, app } from 'electron';
 import { join } from 'path';
-import { mkdir, writeFile, readdir, unlink, stat } from 'fs/promises';
+import { mkdir, writeFile, readdir, unlink, stat, rename } from 'fs/promises';
 import { existsSync } from 'fs';
+import { spawn } from 'child_process';
 import { v4 as uuidv4 } from 'uuid';
+import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 import {
   CaptureSource,
   CaptureOptions,
@@ -322,6 +324,35 @@ export class DesktopCapturer {
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }
 
+  /**
+   * Remux a webm file in place via `ffmpeg -c copy` to fix container headers
+   * produced by MediaRecorder. Writes to a temp file then atomically renames.
+   */
+  private remuxWebm(filePath: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const tempPath = `${filePath}.remux.webm`;
+      const args = ['-y', '-v', 'error', '-i', filePath, '-c', 'copy', tempPath];
+      const proc = spawn(ffmpegInstaller.path, args);
+      let stderr = '';
+      proc.stderr.on('data', (d) => {
+        stderr += d.toString();
+      });
+      proc.on('error', reject);
+      proc.on('close', async (code) => {
+        if (code !== 0) {
+          reject(new Error(`ffmpeg exited ${code}: ${stderr.trim()}`));
+          return;
+        }
+        try {
+          await rename(tempPath, filePath);
+          resolve();
+        } catch (err) {
+          reject(err);
+        }
+      });
+    });
+  }
+
   private async finalizeCapture(sessionId: string): Promise<CaptureResult> {
     const state = this.sessions.get(sessionId);
     if (!state) {
@@ -346,6 +377,16 @@ export class DesktopCapturer {
     }
 
     await writeFile(state.filePath, combined);
+
+    // MediaRecorder writes webm without finalized container metadata (no duration,
+    // non-monotonic timestamps) which makes Chromium <video> refuse to play it.
+    // Remux in-place with `ffmpeg -c copy` to rewrite the EBML headers cleanly.
+    // No re-encode, so this is fast and lossless.
+    try {
+      await this.remuxWebm(state.filePath);
+    } catch (err) {
+      console.warn(`[DesktopCapturer] Remux failed (file may not be playable):`, (err as Error).message);
+    }
 
     const stats = await stat(state.filePath);
 

@@ -20,8 +20,9 @@ function VideoPlayerModal({ filePath, title, recordingId, onClose }: VideoPlayer
   const [videoDimensions, setVideoDimensions] = useState({ width: 0, height: 0, displayWidth: 0, displayHeight: 0 });
   const [ocrReady, setOcrReady] = useState(false);
 
-  // Convert file path to file:// URL
-  const videoSrc = `file://${filePath}`;
+  // Serve via the registered `media://` protocol (see main/index.ts).
+  // Plain file:// is blocked when the renderer is loaded over http://localhost in dev.
+  const videoSrc = `media://${filePath}`;
 
   useEffect(() => {
     const video = videoRef.current;

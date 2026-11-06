@@ -42,8 +42,11 @@ interface MediaConstraints {
 // =============================================================================
 
 const CHUNK_INTERVAL_MS = 5000; // Send chunks every 5 seconds (more frequent for reliability)
-const MIME_TYPE = 'video/webm;codecs=vp9';
-const FALLBACK_MIME_TYPE = 'video/webm;codecs=vp8';
+// VP8 first: Chromium's <video> element reliably decodes VP8 webm.
+// VP9 webm captured by MediaRecorder sometimes uses a pixel format the
+// in-process decoder rejects with "Unsupported pixel format: -1".
+const MIME_TYPE = 'video/webm;codecs=vp8';
+const FALLBACK_MIME_TYPE = 'video/webm;codecs=vp9';
 const BASIC_MIME_TYPE = 'video/webm';
 
 // =============================================================================

@@ -309,7 +309,10 @@ export class RecordingIndexer {
         }
 
         const videoStream = data.streams.find((s) => s.codec_type === 'video');
-        const duration = Math.round((data.format.duration || 0) * 1000);
+        // ffprobe returns the string "N/A" for duration on streaming webm files
+        // produced by MediaRecorder (no duration in the EBML header). Coerce safely.
+        const rawDuration = Number(data.format.duration);
+        const duration = Number.isFinite(rawDuration) ? Math.round(rawDuration * 1000) : 0;
         const resolution = videoStream ? `${videoStream.width}x${videoStream.height}` : '0x0';
         const fps = videoStream?.r_frame_rate ? this.parseFrameRate(videoStream.r_frame_rate) : 30;
         const codec = videoStream?.codec_name || 'unknown';

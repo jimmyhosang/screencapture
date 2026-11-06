@@ -1,344 +1,334 @@
-import { useState, useEffect, useCallback } from 'react';
-import Dashboard from './components/Dashboard';
-import SessionList from './components/SessionList';
-import PlayerModal from './components/PlayerModal';
+import React, { useCallback, useEffect, useState } from 'react';
 import VideoPlayerModal from './components/VideoPlayerModal';
-import Settings from './components/Settings';
-import RecordingControls from './components/RecordingControls';
-import DesktopCaptureControls from './components/DesktopCaptureControls';
-import OCRTestMode from './components/OCRTestMode';
 import { initializeMediaCapture, cleanupMediaCapture } from './services/media-capture';
 
-type View = 'dashboard' | 'settings' | 'record';
-type RecordMode = 'url' | 'desktop';
-
-interface Session {
+interface Source {
   id: string;
   name: string;
-  timestamp: number;
+  thumbnail: string;
+  isScreen: boolean;
+  isWindow: boolean;
+}
+
+interface Recording {
+  id: string;
+  filename: string;
+  startTime: number;
   duration: number;
-  eventCount: number;
-  events?: unknown[];
-  privacyConfig?: {
-    maskInputs: boolean;
-    blockSensitive: boolean;
-    maskPiiPatterns: boolean;
-  } | null;
-  // Desktop recording fields
-  isDesktopRecording?: boolean;
-  filePath?: string;
+  filePath: string;
   thumbnailBase64?: string;
-  resolution?: string;
 }
 
-interface Stats {
-  sessionCount: number;
-  totalDuration: number;
-  totalEvents: number;
-  averageDuration: number;
+type Status =
+  | { kind: 'idle' }
+  | { kind: 'starting' }
+  | { kind: 'recording'; startedAt: number }
+  | { kind: 'stopping' }
+  | { kind: 'redacting'; message: string; progress?: number }
+  | { kind: 'saved'; piiCount: number };
+
+function formatDuration(ms: number): string {
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  return `${m}:${(s % 60).toString().padStart(2, '0')}`;
 }
 
-function App(): JSX.Element {
-  const [view, setView] = useState<View>('dashboard');
-  const [recordMode, setRecordMode] = useState<RecordMode>('desktop');
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
-  const [playingSession, setPlayingSession] = useState<Session | null>(null);
-  const [playingVideo, setPlayingVideo] = useState<{ filePath: string; title: string; recordingId: string } | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showOCRTest, setShowOCRTest] = useState(false);
+function formatDate(ts: number): string {
+  return new Date(ts).toLocaleString();
+}
 
-  const loadSessions = useCallback(async () => {
-    const allSessions: Session[] = [];
+function App(): React.JSX.Element {
+  const [sources, setSources] = useState<Source[]>([]);
+  const [selectedSourceId, setSelectedSourceId] = useState<string>('');
+  const [autoRedact, setAutoRedact] = useState(true);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [status, setStatus] = useState<Status>({ kind: 'idle' });
+  const [recordings, setRecordings] = useState<Recording[]>([]);
+  const [playing, setPlaying] = useState<Recording | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [elapsed, setElapsed] = useState(0);
 
-    // Load URL recording sessions (rrweb)
-    if (window.api?.sessions?.getAll) {
-      try {
-        const urlSessions = await window.api.sessions.getAll();
-        allSessions.push(...urlSessions);
-      } catch (err) {
-        console.error('Failed to load URL sessions:', err);
-      }
+  const loadRecordings = useCallback(async () => {
+    if (!window.api?.indexer?.list) return;
+    try {
+      const result = await window.api.indexer.list({}, 1, 20);
+      const all = result.recordings ?? [];
+      // Indexer can return the same recording twice during reindex races; dedupe by id.
+      const seen = new Set<string>();
+      const unique = all.filter((r) => (seen.has(r.id) ? false : seen.add(r.id)));
+      setRecordings(unique);
+    } catch (err) {
+      console.error('Failed to load recordings:', err);
     }
-
-    // Load desktop recording sessions from indexer
-    if (window.api?.indexer?.list) {
-      try {
-        const result = await window.api.indexer.list({}, 1, 100);
-        const desktopSessions = result.recordings.map((rec: {
-          id: string;
-          filename: string;
-          startTime: number;
-          duration: number;
-          filePath: string;
-          thumbnailBase64?: string;
-          resolution?: string;
-        }) => ({
-          id: rec.id,
-          name: rec.filename.replace('.webm', ''),
-          timestamp: rec.startTime,
-          duration: rec.duration,
-          eventCount: 0,
-          isDesktopRecording: true,
-          filePath: rec.filePath,
-          thumbnailBase64: rec.thumbnailBase64,
-          resolution: rec.resolution
-        }));
-        allSessions.push(...desktopSessions);
-      } catch (err) {
-        console.error('Failed to load desktop recordings:', err);
-      }
-    }
-
-    // Sort by timestamp descending (newest first)
-    allSessions.sort((a, b) => b.timestamp - a.timestamp);
-    setSessions(allSessions);
   }, []);
 
-  const loadStats = useCallback(async () => {
-    if (!window.api?.sessions?.stats) {
-      console.error('window.api.sessions.stats is not available');
+  const loadSources = useCallback(async () => {
+    if (!window.api?.sessionManager?.getSources) return;
+    try {
+      const list = await window.api.sessionManager.getSources();
+      setSources(list);
+      if (list.length > 0) {
+        setSelectedSourceId((prev) => prev || list[0].id);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to enumerate screens');
+    }
+  }, []);
+
+  // Bootstrap: media capture bridge, sources, auto-redaction default ON, recordings.
+  useEffect(() => {
+    initializeMediaCapture();
+    loadSources();
+    loadRecordings();
+
+    // Default the persisted config to enabled so the demo always redacts.
+    if (window.api?.sessionManager?.setAutoRedactionConfig) {
+      window.api.sessionManager
+        .setAutoRedactionConfig({ enabled: true })
+        .catch((err) => console.error('Failed to enable auto-redaction:', err));
+    }
+
+    return () => cleanupMediaCapture();
+  }, [loadSources, loadRecordings]);
+
+  // Tick elapsed time while recording
+  useEffect(() => {
+    if (status.kind !== 'recording') return;
+    const id = setInterval(() => setElapsed(Date.now() - status.startedAt), 250);
+    return () => clearInterval(id);
+  }, [status]);
+
+  // Subscribe to session lifecycle events from main
+  useEffect(() => {
+    const api = window.api?.sessionManager;
+    if (!api) return;
+
+    api.onStarted(({ sessionId: sid }) => {
+      setSessionId(sid);
+      setStatus({ kind: 'recording', startedAt: Date.now() });
+    });
+
+    api.onStopping(() => setStatus({ kind: 'stopping' }));
+
+    api.onStopped((data) => {
+      setSessionId(null);
+      // session:stopped fires after redaction completes; pull final pii count from the result if present.
+      const redaction = (data as { result?: { redaction?: { piiRegionsFound?: number } } })?.result?.redaction;
+      const piiCount = redaction?.piiRegionsFound ?? 0;
+      setStatus({ kind: 'saved', piiCount });
+      setTimeout(() => setStatus({ kind: 'idle' }), 4000);
+      loadRecordings();
+    });
+
+    api.onError(({ error: msg }) => {
+      setError(msg ?? 'Recording error');
+      setSessionId(null);
+      setStatus({ kind: 'idle' });
+    });
+
+    api.onRedacting?.(({ message }) => {
+      setStatus({ kind: 'redacting', message: message ?? 'Analyzing for PII…' });
+    });
+
+    api.onRedactionProgress?.((data) => {
+      const progress = data as {
+        stage?: 'extracting' | 'analyzing' | 'redacting' | 'complete' | 'error';
+        progress?: number;
+        message?: string;
+        piiFound?: number;
+      };
+      // `session:stopped` handles the terminal "saved" state; here we just show interim progress.
+      if (progress.stage && progress.stage !== 'complete' && progress.stage !== 'error') {
+        setStatus({
+          kind: 'redacting',
+          message: progress.message ?? 'Redacting…',
+          progress: progress.progress
+        });
+      }
+    });
+
+    return () => api.removeAllListeners?.();
+  }, [loadRecordings]);
+
+  const handleStart = async () => {
+    setError(null);
+    const api = window.api?.sessionManager;
+    if (!api) {
+      setError('Session manager not ready');
       return;
     }
-    const sessionStats = await window.api.sessions.stats();
-    setStats(sessionStats);
-  }, []);
-
-  useEffect(() => {
-    loadSessions();
-    loadStats();
-
-    // Initialize media capture service for desktop recording
-    initializeMediaCapture();
-
-    // Listen for import events from tray
-    if (window.api?.on?.importSessionFile) {
-      window.api.on.importSessionFile(async (filePath: string) => {
-        const imported = await window.api.sessions.import(filePath);
-        if (imported) {
-          loadSessions();
-          loadStats();
-        }
-      });
+    if (!selectedSourceId) {
+      setError('Select a screen or window first');
+      return;
     }
-
-    // Cleanup on unmount
-    return () => {
-      cleanupMediaCapture();
-    };
-  }, [loadSessions, loadStats]);
-
-  const handleImport = async () => {
-    const filePath = await window.api.dialog.openFile();
-    if (filePath) {
-      const imported = await window.api.sessions.import(filePath);
-      if (imported) {
-        loadSessions();
-        loadStats();
-      }
+    setStatus({ kind: 'starting' });
+    try {
+      await api.setAutoRedactionConfig({ enabled: autoRedact });
+      await api.start(selectedSourceId, {
+        quality: 'high',
+        captureInputs: false,
+        captureWindowActivity: false
+      });
+      // onStarted listener will flip status -> recording
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to start');
+      setStatus({ kind: 'idle' });
     }
   };
 
-  const handleExport = async (id: string) => {
-    await window.api.sessions.export(id);
+  const handleStop = async () => {
+    const api = window.api?.sessionManager;
+    if (!api || !sessionId) return;
+    try {
+      await api.stop(sessionId);
+      // onStopping / onStopped / redaction events drive the rest
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to stop');
+    }
   };
 
   const handleDelete = async (id: string) => {
-    // Check if this is a desktop recording
-    const session = sessions.find(s => s.id === id);
-    let confirmed = false;
-
-    if (session?.isDesktopRecording && window.api?.indexer?.delete) {
-      // Delete from indexer (desktop recordings)
-      confirmed = await window.api.indexer.delete(id);
-    } else {
-      // Delete from sessions (URL recordings)
-      confirmed = await window.api.sessions.delete(id);
-    }
-
-    if (confirmed) {
-      if (selectedSession?.id === id) {
-        setSelectedSession(null);
-      }
-      loadSessions();
-      loadStats();
-    }
+    if (!window.api?.indexer?.delete) return;
+    await window.api.indexer.delete(id);
+    loadRecordings();
   };
 
-  const handlePlay = async (session: Session) => {
-    if (session.isDesktopRecording && session.filePath) {
-      // For desktop recordings, use in-app video player
-      setPlayingVideo({
-        filePath: session.filePath,
-        title: session.name,
-        recordingId: session.id
-      });
-      return;
-    }
+  const isRecording = status.kind === 'recording';
+  const isBusy = ['starting', 'stopping', 'redacting'].includes(status.kind);
 
-    // Load full session with events (URL recordings)
-    const fullSession = await window.api.sessions.get(session.id);
-    if (fullSession && fullSession.events) {
-      setPlayingSession(fullSession);
+  const statusLine = (() => {
+    switch (status.kind) {
+      case 'idle':
+        return 'Ready';
+      case 'starting':
+        return 'Starting capture…';
+      case 'recording':
+        return `Recording · ${formatDuration(elapsed)}`;
+      case 'stopping':
+        return 'Stopping…';
+      case 'redacting':
+        return status.progress != null
+          ? `${status.message} ${Math.round(status.progress)}%`
+          : status.message;
+      case 'saved':
+        return status.piiCount > 0
+          ? `Saved · redacted ${status.piiCount} PII region${status.piiCount === 1 ? '' : 's'}`
+          : 'Saved · no PII detected';
     }
-  };
-
-  const filteredSessions = sessions.filter((session) =>
-    session.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  })();
 
   return (
-    <div className="app">
-      {/* Sidebar */}
-      <div className="sidebar">
-        <div className="sidebar-header">
-          <h1>Screencapture</h1>
-          <p>Session Recording & Replay</p>
+    <div className="mojo-app">
+      <header className="mojo-header">
+        <div className="mojo-wordmark">
+          MOJO<span className="mojo-wordmark-cx">-CX</span>
+          <span className="mojo-wordmark-copy">©</span>
         </div>
+        <div className="mojo-tagline">Capture · Redact · Replay</div>
+      </header>
 
-        {/* Navigation */}
-        <div className="nav-tabs">
-          <button
-            className={`nav-tab ${view === 'dashboard' ? 'active' : ''}`}
-            onClick={() => setView('dashboard')}
-          >
-            Dashboard
-          </button>
-          <button
-            className={`nav-tab ${view === 'record' ? 'active' : ''}`}
-            onClick={() => setView('record')}
-          >
-            Record
-          </button>
-          <button
-            className={`nav-tab ${view === 'settings' ? 'active' : ''}`}
-            onClick={() => setView('settings')}
-          >
-            Settings
-          </button>
-        </div>
+      <main className="mojo-main">
+        <h1 className="mojo-display">UNLOCK YOUR AGENT POTENTIAL</h1>
 
-        {/* Search */}
-        <input
-          type="text"
-          className="search-input"
-          placeholder="Search sessions..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-
-        {/* Session list */}
-        <SessionList
-          sessions={filteredSessions}
-          selectedId={selectedSession?.id || null}
-          onSelect={setSelectedSession}
-          onPlay={handlePlay}
-          onExport={handleExport}
-          onDelete={handleDelete}
-        />
-
-        {/* Toolbar */}
-        <div className="toolbar">
-          <button className="btn btn-primary" onClick={handleImport}>
-            Import Session
-          </button>
-          <button className="btn btn-secondary" onClick={() => setShowOCRTest(true)}>
-            OCR Test
-          </button>
-        </div>
-      </div>
-
-      {/* Main content */}
-      <div className="main-content">
-        {view === 'dashboard' && (
-          <Dashboard
-            stats={stats}
-            selectedSession={selectedSession}
-            onPlay={handlePlay}
-          />
-        )}
-        {view === 'record' && (
-          <div className="record-view">
-            {/* Record Mode Tabs */}
-            <div className="record-mode-tabs">
-              <button
-                className={`mode-tab ${recordMode === 'desktop' ? 'active' : ''}`}
-                onClick={() => setRecordMode('desktop')}
-              >
-                🖥️ Desktop Capture
-              </button>
-              <button
-                className={`mode-tab ${recordMode === 'url' ? 'active' : ''}`}
-                onClick={() => setRecordMode('url')}
-              >
-                🌐 URL Recording
-              </button>
-            </div>
-
-            {/* Desktop Capture Mode */}
-            {recordMode === 'desktop' && (
-              <DesktopCaptureControls
-                onRecordingComplete={async (result) => {
-                  // Reload sessions after desktop capture
-                  loadSessions();
-                  loadStats();
-                  setView('dashboard');
-                }}
-              />
-            )}
-
-            {/* URL Recording Mode */}
-            {recordMode === 'url' && (
-              <RecordingControls
-                onRecordingComplete={async (events, duration, privacyConfig) => {
-                  // Save the recording as a new session
-                  const session = {
-                    id: crypto.randomUUID(),
-                    name: `Recording ${new Date().toLocaleString()}`,
-                    timestamp: Date.now(),
-                    duration,
-                    eventCount: events.length,
-                    events,
-                    privacyConfig: {
-                      maskInputs: privacyConfig.maskAllInputs,
-                      blockSensitive: privacyConfig.blockSensitive,
-                      maskPiiPatterns: privacyConfig.maskPiiPatterns
-                    }
-                  };
-                  await window.api.sessions.save(session);
-                  loadSessions();
-                  loadStats();
-                  setView('dashboard');
-                }}
-              />
-            )}
+        <section className="mojo-card">
+          <div className="mojo-field">
+            <label htmlFor="source" className="mojo-label">
+              Source
+            </label>
+            <select
+              id="source"
+              className="mojo-select"
+              value={selectedSourceId}
+              onChange={(e) => setSelectedSourceId(e.target.value)}
+              disabled={isRecording || isBusy}
+            >
+              {sources.length === 0 && <option value="">No screens available</option>}
+              {sources.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.isScreen ? '🖥️' : '🪟'} {s.name}
+                </option>
+              ))}
+            </select>
           </div>
-        )}
-        {view === 'settings' && <Settings />}
-      </div>
 
-      {/* Player modal for URL recordings */}
-      {playingSession && playingSession.events && (
-        <PlayerModal
-          session={playingSession}
-          onClose={() => setPlayingSession(null)}
-        />
-      )}
+          <div className="mojo-toggle-row">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={autoRedact}
+              className={`mojo-toggle ${autoRedact ? 'on' : ''}`}
+              onClick={() => setAutoRedact((v) => !v)}
+              disabled={isRecording || isBusy}
+            >
+              <span className="mojo-toggle-knob" />
+            </button>
+            <div className="mojo-toggle-text">
+              <div className="mojo-toggle-title">Auto-redact PII</div>
+              <div className="mojo-toggle-desc">
+                Detects emails, phone numbers, SSNs, and credit cards after capture.
+              </div>
+            </div>
+          </div>
 
-      {/* Video player modal for desktop recordings */}
-      {playingVideo && (
+          <button
+            type="button"
+            className={`mojo-record-btn ${isRecording ? 'recording' : ''}`}
+            onClick={isRecording ? handleStop : handleStart}
+            disabled={isBusy && !isRecording}
+          >
+            <span className="mojo-record-dot" />
+            {isRecording ? 'STOP RECORDING' : 'START RECORDING'}
+          </button>
+
+          <div className="mojo-status" data-kind={status.kind}>
+            {statusLine}
+          </div>
+
+          {error && <div className="mojo-error">{error}</div>}
+        </section>
+
+        <section className="mojo-recordings">
+          <div className="mojo-recordings-header">
+            <h2 className="mojo-h2">Recent recordings</h2>
+            <button className="mojo-link" onClick={loadRecordings}>
+              Refresh
+            </button>
+          </div>
+
+          {recordings.length === 0 ? (
+            <div className="mojo-empty">No recordings yet.</div>
+          ) : (
+            <ul className="mojo-recording-list">
+              {recordings.map((r) => (
+                <li key={r.id} className="mojo-recording-item">
+                  <div className="mojo-recording-meta">
+                    <div className="mojo-recording-name">{r.filename.replace('.webm', '')}</div>
+                    <div className="mojo-recording-sub">
+                      {formatDate(r.startTime)} · {formatDuration(r.duration)}
+                    </div>
+                  </div>
+                  <div className="mojo-recording-actions">
+                    <button className="mojo-btn-ghost" onClick={() => setPlaying(r)}>
+                      Play
+                    </button>
+                    <button className="mojo-btn-ghost mojo-danger" onClick={() => handleDelete(r.id)}>
+                      Delete
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </main>
+
+      {playing && (
         <VideoPlayerModal
-          filePath={playingVideo.filePath}
-          title={playingVideo.title}
-          recordingId={playingVideo.recordingId}
-          onClose={() => setPlayingVideo(null)}
+          filePath={playing.filePath}
+          title={playing.filename}
+          recordingId={playing.id}
+          onClose={() => setPlaying(null)}
         />
-      )}
-
-      {/* OCR Test mode modal */}
-      {showOCRTest && (
-        <OCRTestMode onClose={() => setShowOCRTest(false)} />
       )}
     </div>
   );

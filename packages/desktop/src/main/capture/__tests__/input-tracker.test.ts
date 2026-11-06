@@ -19,6 +19,14 @@ vi.mock('uiohook-napi', () => {
   };
 });
 
+vi.mock('electron', () => {
+  return {
+    systemPreferences: {
+      isTrustedAccessibilityClient: vi.fn(() => true)
+    }
+  };
+});
+
 import { InputTracker, getInputTracker, resetInputTracker } from '../input-tracker';
 import { uIOhook } from 'uiohook-napi';
 import type { InputTrackerConfig } from '../input-types';

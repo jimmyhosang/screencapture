@@ -252,8 +252,11 @@ export class AutoRedactionService {
           fps = den ? num / den : num;
         }
 
+        // ffprobe returns "N/A" (string) for duration on MediaRecorder webm files,
+        // which evaluates as truthy but produces NaN in arithmetic — coerce explicitly.
+        const rawDuration = Number(metadata.format.duration);
         resolve({
-          duration: metadata.format.duration || 0,
+          duration: Number.isFinite(rawDuration) ? rawDuration : 0,
           width: videoStream.width || 1920,
           height: videoStream.height || 1080,
           fps,
