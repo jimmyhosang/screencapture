@@ -11,7 +11,7 @@
  * Exit code 0 = all checks passed. Run with `pnpm --filter @screencapture/desktop test:e2e`
  * (on headless Linux: `xvfb-run -a -s "-screen 0 1280x720x24" pnpm ... test:e2e`).
  */
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, screen as electronScreen } from 'electron';
 import { execFileSync } from 'child_process';
 import { mkdtempSync } from 'fs';
 import { tmpdir } from 'os';
@@ -21,8 +21,9 @@ import { ScreenRecorder } from '../src/main/services/screen-recorder';
 import { setupRedactionHandlers } from '../src/main/redaction';
 import type { RedactionMask } from '../src/main/redaction';
 
-const W = 1280;
-const H = 720;
+// Recording size = the real display size (set once the app is ready)
+let W = 1280;
+let H = 720;
 const RECORD_MS = Number(process.env.RECORD_MS || 4000);
 const CHUNK_MS = process.env.CHUNK_MS ? Number(process.env.CHUNK_MS) : undefined;
 
@@ -123,6 +124,7 @@ const PAGE = `
 </body></html>`;
 
 async function run(): Promise<void> {
+  ({ width: W, height: H } = electronScreen.getPrimaryDisplay().size);
   const win = new BrowserWindow({ x: 0, y: 0, width: W, height: H, frame: false, show: true });
   await win.loadURL(`data:text/html,${encodeURIComponent(PAGE)}`);
   await sleep(500);

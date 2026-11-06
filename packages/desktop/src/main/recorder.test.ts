@@ -1,123 +1,152 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { setupRecordingHandlers } from './recorder';
-import { ipcMain, BrowserWindow, desktopCapturer } from 'electron';
+import { BrowserWindow } from 'electron';
 
-// Explicitly hoist mocks to reference them in tests
 const mocks = vi.hoisted(() => {
+    const windowListeners: Record<string, Function> = {};
     return {
+        windowListeners,
         loadURL: vi.fn().mockResolvedValue(undefined),
-        close: vi.fn(),
-        on: vi.fn(),
-        executeJavaScript: vi.fn().mockResolvedValue([]),
+        close: vi.fn(() => windowListeners['closed']?.()),
+        destroy: vi.fn(),
+        send: vi.fn(),
         handle: vi.fn(),
+        on: vi.fn(),
+        removeListener: vi.fn(),
         getSources: vi.fn().mockResolvedValue([{ id: 'screen:1', name: 'Screen 1', thumbnail: { toDataURL: () => 'data:img' } }])
     };
 });
 
+const RECORDER_WC_ID = 42;
+
 vi.mock('electron', () => {
-    // Use a regular function for the mock implementation to support 'new'
-    const MockBrowserWindow = vi.fn(function (options) { // Capture options
-        // Store options for verification if needed, or simply let the testspy capture it
+    const MockBrowserWindow = vi.fn(function () {
         return {
             loadURL: mocks.loadURL,
-            webContents: {
-                executeJavaScript: mocks.executeJavaScript,
-                on: mocks.on
-            },
-            on: mocks.on,
+            webContents: { id: RECORDER_WC_ID, on: vi.fn(), send: mocks.send },
+            on: (event: string, fn: Function) => { mocks.windowListeners[event] = fn; },
             close: mocks.close,
-            options // Expose options for test assertion if we returned the instance, but verification is done on constructor spy
+            destroy: mocks.destroy,
+            isDestroyed: () => false
         };
     });
-
     return {
-        ipcMain: {
-            handle: mocks.handle,
-        },
-        desktopCapturer: {
-            getSources: mocks.getSources,
-        },
-        BrowserWindow: MockBrowserWindow,
+        ipcMain: { handle: mocks.handle, on: mocks.on, removeListener: mocks.removeListener },
+        desktopCapturer: { getSources: mocks.getSources },
+        BrowserWindow: MockBrowserWindow
     };
 });
 
-describe('Recorder Logic', () => {
+describe('URL recorder', () => {
     let handlers: Record<string, Function> = {};
+    let listeners: Record<string, Function[]> = {};
+
+    /** Simulate a message from a renderer (default: the recording window) */
+    const fromRenderer = (channel: string, payload?: unknown, senderId = RECORDER_WC_ID) => {
+        const event: { sender: { id: number }; returnValue?: unknown } = { sender: { id: senderId } };
+        for (const fn of listeners[channel] ?? []) fn(event, payload);
+        return event;
+    };
 
     beforeEach(() => {
         vi.clearAllMocks();
         handlers = {};
-
-        mocks.handle.mockImplementation((channel: string, listener: Function) => {
-            handlers[channel] = listener;
+        listeners = {};
+        mocks.handle.mockImplementation((channel: string, fn: Function) => { handlers[channel] = fn; });
+        mocks.on.mockImplementation((channel: string, fn: Function) => {
+            (listeners[channel] ??= []).push(fn);
         });
-
+        mocks.removeListener.mockImplementation((channel: string, fn: Function) => {
+            listeners[channel] = (listeners[channel] ?? []).filter((f) => f !== fn);
+        });
+        // The preload acknowledges a stop request right away
+        mocks.send.mockImplementation((channel: string) => {
+            if (channel === 'recorder:stop') fromRenderer('recorder:stopped');
+        });
         setupRecordingHandlers();
     });
 
     afterEach(async () => {
-        if (handlers['recording:stop']) {
-            await handlers['recording:stop'](null);
+        await handlers['recording:stop']?.(null);
+    });
+
+    it('registers IPC handlers for the UI and the recorder preload', () => {
+        for (const ch of ['recording:getSources', 'recording:startUrl', 'recording:stop', 'recording:isActive']) {
+            expect(handlers[ch]).toBeTypeOf('function');
         }
+        expect(listeners['recorder:getConfig']).toHaveLength(1);
+        expect(listeners['recorder:event']).toHaveLength(1);
     });
 
-    it('should register all recording handlers', () => {
-        expect(mocks.handle).toHaveBeenCalledWith('recording:getSources', expect.any(Function));
-        expect(mocks.handle).toHaveBeenCalledWith('recording:startUrl', expect.any(Function));
-        expect(mocks.handle).toHaveBeenCalledWith('recording:stop', expect.any(Function));
-        expect(mocks.handle).toHaveBeenCalledWith('recording:isActive', expect.any(Function));
-    });
-
-    it('should get recording sources', async () => {
+    it('lists capture sources', async () => {
         const result = await handlers['recording:getSources'](null);
-
-        expect(mocks.getSources).toHaveBeenCalledWith({
-            types: ['screen', 'window'],
-            thumbnailSize: { width: 150, height: 150 }
-        });
-        expect(result).toHaveLength(1);
-        expect(result[0].id).toBe('screen:1');
+        expect(result).toEqual([{ id: 'screen:1', name: 'Screen 1', type: 'screen', thumbnailDataUrl: 'data:img' }]);
     });
 
-    it('should start recording a URL', async () => {
-        const url = 'https://example.com';
-        const config = { maskAllInputs: true };
-
-        const result = await handlers['recording:startUrl'](null, url, config);
+    it('opens the URL in a window that records via the bundled preload', async () => {
+        const result = await handlers['recording:startUrl'](null, 'https://example.com', { maskAllInputs: true });
 
         expect(result).toEqual({ success: true });
-        expect(BrowserWindow).toHaveBeenCalledTimes(1);
-
-        // Verify webPreferences fix for ERR_ABORTED
-        const constructorOptions = (BrowserWindow as any).mock.calls[0][0];
-        expect(constructorOptions.webPreferences.sandbox).toBe(false);
-        expect(constructorOptions.webPreferences.webSecurity).toBe(false);
-
-        expect(mocks.loadURL).toHaveBeenCalledWith(url);
-        expect(mocks.executeJavaScript).toHaveBeenCalled();
-
-        const isActive = await handlers['recording:isActive'](null);
-        expect(isActive).toBe(true);
+        const options = (BrowserWindow as any).mock.calls[0][0];
+        expect(options.webPreferences.preload).toMatch(/preload[\\/]recorder\.mjs$/);
+        expect(options.webPreferences.contextIsolation).toBe(true);
+        expect(options.webPreferences.webSecurity).not.toBe(false);
+        expect(mocks.loadURL).toHaveBeenCalledWith('https://example.com');
+        expect(await handlers['recording:isActive'](null)).toBe(true);
     });
 
-    it('should prevent double recording', async () => {
+    it('gives the privacy config only to the recording window', async () => {
+        const config = { maskAllInputs: true, maskTextContent: true };
+        await handlers['recording:startUrl'](null, 'https://example.com', config);
+
+        expect(fromRenderer('recorder:getConfig').returnValue).toEqual(config);
+        expect(fromRenderer('recorder:getConfig', undefined, 7).returnValue).toBeNull();
+    });
+
+    it('rejects invalid and non-web URLs', async () => {
+        expect((await handlers['recording:startUrl'](null, 'not a url', {})).success).toBe(false);
+        expect((await handlers['recording:startUrl'](null, 'javascript:alert(1)', {})).success).toBe(false);
+        expect(BrowserWindow).not.toHaveBeenCalled();
+    });
+
+    it('prevents a second recording while one is active', async () => {
         await handlers['recording:startUrl'](null, 'https://1.com', {});
-
         const result = await handlers['recording:startUrl'](null, 'https://2.com', {});
-
-        expect(result.success).toBe(false);
-        expect(result.error).toBe('Recording already in progress');
+        expect(result).toEqual({ success: false, error: 'Recording already in progress' });
     });
 
-    it('should stop recording', async () => {
+    it('returns events streamed from the recording window and closes it', async () => {
         await handlers['recording:startUrl'](null, 'https://example.com', {});
+        fromRenderer('recorder:event', { type: 4 });
+        fromRenderer('recorder:event', { type: 2 });
+        fromRenderer('recorder:event', { type: 99 }, 7); // other window: ignored
+        // A navigation means a fresh page, but events keep accumulating
+        fromRenderer('recorder:event', { type: 4 });
 
         const result = await handlers['recording:stop'](null);
 
+        expect(mocks.send).toHaveBeenCalledWith('recorder:stop');
         expect(result.success).toBe(true);
+        expect(result.events).toEqual([{ type: 4 }, { type: 2 }, { type: 4 }]);
         expect(mocks.close).toHaveBeenCalled();
+        expect(await handlers['recording:isActive'](null)).toBe(false);
+    });
 
-        const isActive = await handlers['recording:isActive'](null);
-        expect(isActive).toBe(false);
+    it('keeps captured events if the user closes the window before stopping', async () => {
+        await handlers['recording:startUrl'](null, 'https://example.com', {});
+        fromRenderer('recorder:event', { type: 4 });
+        fromRenderer('recorder:event', { type: 2 });
+        mocks.windowListeners['closed']();
+
+        const result = await handlers['recording:stop'](null);
+        expect(result.success).toBe(true);
+        expect(result.events).toHaveLength(2);
+    });
+
+    it('does not report success for a recording with nothing captured', async () => {
+        await handlers['recording:startUrl'](null, 'https://example.com', {});
+        const result = await handlers['recording:stop'](null);
+        expect(result.success).toBe(false);
+        expect(result.error).toMatch(/Nothing was captured/);
     });
 });

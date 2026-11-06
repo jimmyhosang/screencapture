@@ -14,11 +14,13 @@ export default defineConfig({
     }
   },
   preload: {
-    plugins: [externalizeDepsPlugin()],
+    // rrweb and core are bundled into the recorder preload so it is self-contained
+    plugins: [externalizeDepsPlugin({ exclude: ['rrweb', '@screencapture/core'] })],
     build: {
       rollupOptions: {
         input: {
-          index: resolve(__dirname, 'src/preload/index.ts')
+          index: resolve(__dirname, 'src/preload/index.ts'),
+          recorder: resolve(__dirname, 'src/preload/recorder.ts')
         }
       }
     }

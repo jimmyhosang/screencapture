@@ -65,10 +65,22 @@ pnpm lint
 # End-to-end capture + redaction checks (build first: pnpm build)
 # - extension: loads dist/ into Chromium, records a PII fixture, scans events for leaks
 # - web: records the demo page via the UI, checks saved session + replay for leaks
-# - desktop: records the real screen in Electron, applies video redaction, checks pixels
+# - desktop: records the real screen in Electron, applies video redaction, checks pixels,
+#   then drives the full built app UI (record URL -> replay -> export/import -> settings)
 # On headless Linux wrap in: xvfb-run -a -s "-screen 0 1280x720x24"
 pnpm test:e2e
+
+# Full desktop app UI test only (needs `pnpm --filter @screencapture/desktop build`)
+pnpm --filter @screencapture/desktop test:app
 ```
+
+The desktop app needs `better-sqlite3` compiled for Electron's ABI, not Node's.
+`pnpm install` does this via the desktop `postinstall` (`electron-builder install-app-deps`).
+If that can't reach electronjs.org, fetch the prebuilt binary instead, from the
+better-sqlite3 package directory:
+`node ../prebuild-install/bin.js --runtime electron --target <electron version> --arch x64`.
+Note the Electron build won't load under plain Node, so unit tests that use the
+real database would need the Node build.
 
 ## Extension Development
 

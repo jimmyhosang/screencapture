@@ -1,11 +1,12 @@
 /**
  * Recording Module - Handles screen/window recording with rrweb
  * 
- * Opens a BrowserWindow to the target URL and injects rrweb for DOM recording
- * with privacy controls from @screencapture/core.
+ * Opens a BrowserWindow to the target URL; a bundled preload records the DOM
+ * with rrweb and redacts PII using @screencapture/core.
  */
 
 import { BrowserWindow, ipcMain, desktopCapturer } from 'electron';
+import { join } from 'path';
 
 /**
  * Recorder configuration compatible with @screencapture/core
@@ -32,7 +33,9 @@ interface RecordingSource {
 }
 
 interface RecordingSession {
-    window: BrowserWindow;
+    /** null once the user has closed the recording window */
+    window: BrowserWindow | null;
+    webContentsId: number;
     events: unknown[];
     startTime: number;
     config: Partial<RecorderConfig>;
@@ -58,45 +61,11 @@ async function getSources(): Promise<RecordingSource[]> {
 }
 
 /**
- * Generate rrweb injection script with privacy config
- */
-function generateRecordingScript(config: Partial<RecorderConfig>): string {
-    const maskAllInputs = config.maskAllInputs ?? true;
-    const blockClass = config.blockSelectors?.filter(s => s.startsWith('.')).map(s => s.slice(1)).join('|') || 'do-not-record';
-    const maskTextSelector = config.maskTextSelectors?.join(', ') || '.sensitive, .pii, [data-sensitive]';
-
-    return `
-    (function() {
-      const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/rrweb@2.0.0-alpha.4/dist/rrweb.min.js';
-      script.onload = function() {
-        window.__rrwebEvents = [];
-        window.__rrwebStopFn = rrweb.record({
-          emit: function(event) {
-            window.__rrwebEvents.push(event);
-          },
-          maskAllInputs: ${maskAllInputs},
-          blockClass: /${blockClass}/,
-          maskTextSelector: '${maskTextSelector}',
-          maskInputOptions: {
-            password: true,
-            email: ${config.maskInputOptions?.email ?? true},
-            tel: ${config.maskInputOptions?.tel ?? true},
-            text: ${config.maskInputOptions?.text ?? false},
-            textarea: ${config.maskInputOptions?.textarea ?? false}
-          },
-          inlineStylesheet: true,
-          collectFonts: true
-        });
-        console.log('[Screencapture] Recording started with privacy config');
-      };
-      document.head.appendChild(script);
-    })();
-  `;
-}
-
-/**
- * Start recording a URL in a new BrowserWindow
+ * Start recording a URL in a new BrowserWindow.
+ *
+ * Recording is done by a bundled preload (preload/recorder) that runs in every
+ * page the window loads and streams rrweb events here, so it works offline,
+ * isn't blocked by the page's CSP, and keeps recording across navigation.
  */
 async function startRecordingUrl(
     url: string,
@@ -106,21 +75,44 @@ async function startRecordingUrl(
         return { success: false, error: 'Recording already in progress' };
     }
 
+    let parsed: URL;
     try {
-        // Create recording window
+        parsed = new URL(url);
+    } catch {
+        return { success: false, error: 'Please enter a valid URL' };
+    }
+    if (!['http:', 'https:', 'file:'].includes(parsed.protocol)) {
+        return { success: false, error: 'Only http, https and file URLs can be recorded' };
+    }
+
+    try {
         const recordingWindow = new BrowserWindow({
             width: 1280,
             height: 720,
             title: `Recording: ${url}`,
             webPreferences: {
+                preload: join(__dirname, '../preload/recorder.mjs'),
                 nodeIntegration: false,
                 contextIsolation: true,
-                sandbox: false, // Disable sandbox to allow cross-origin requests
-                webSecurity: false // Allow loading cross-origin resources for recording
+                sandbox: false // required for the ESM preload
             }
         });
 
-        // Handle navigation failures
+        activeRecording = {
+            window: recordingWindow,
+            webContentsId: recordingWindow.webContents.id,
+            events: [],
+            startTime: Date.now(),
+            config
+        };
+
+        // Keep what was captured if the user closes the window before stopping
+        recordingWindow.on('closed', () => {
+            if (activeRecording?.window === recordingWindow) {
+                activeRecording.window = null;
+            }
+        });
+
         recordingWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
             // Ignore -3 (ERR_ABORTED) as it often happens during redirects
             if (errorCode !== -3) {
@@ -128,29 +120,11 @@ async function startRecordingUrl(
             }
         });
 
-        // Load the target URL
         await recordingWindow.loadURL(url);
-
-        // Wait a moment for page to settle before injecting script
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // Inject rrweb recording script
-        await recordingWindow.webContents.executeJavaScript(generateRecordingScript(config));
-
-        activeRecording = {
-            window: recordingWindow,
-            events: [],
-            startTime: Date.now(),
-            config
-        };
-
-        // Handle window closing
-        recordingWindow.on('closed', () => {
-            activeRecording = null;
-        });
-
         return { success: true };
     } catch (error) {
+        activeRecording?.window?.destroy();
+        activeRecording = null;
         return {
             success: false,
             error: error instanceof Error ? error.message : 'Failed to start recording'
@@ -171,35 +145,39 @@ async function stopRecording(): Promise<{
         return { success: false, error: 'No active recording' };
     }
 
-    try {
-        const { window, startTime } = activeRecording;
+    const recording = activeRecording;
+    const win = recording.window;
 
-        // Stop rrweb and get events
-        const events = await window.webContents.executeJavaScript(`
-      if (window.__rrwebStopFn) {
-        window.__rrwebStopFn();
-      }
-      window.__rrwebEvents || [];
-    `);
+    // Ask the page to stop and wait until its last events have arrived
+    if (win && !win.isDestroyed()) {
+        await new Promise<void>((resolve) => {
+            const timeout = setTimeout(done, 2000);
+            function done(): void {
+                clearTimeout(timeout);
+                ipcMain.removeListener('recorder:stopped', onStopped);
+                resolve();
+            }
+            function onStopped(event: Electron.IpcMainEvent): void {
+                if (event.sender.id === recording.webContentsId) done();
+            }
+            ipcMain.on('recorder:stopped', onStopped);
+            win.webContents.send('recorder:stop');
+        });
+        win.close();
+    }
 
-        const duration = Date.now() - startTime;
+    activeRecording = null;
+    const duration = Date.now() - recording.startTime;
 
-        // Close the recording window
-        window.close();
-        activeRecording = null;
-
-        return {
-            success: true,
-            events,
-            duration
-        };
-    } catch (error) {
-        activeRecording = null;
+    // A recording needs at least a meta + full snapshot event to be playable
+    if (recording.events.length < 2) {
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Failed to stop recording'
+            error: 'Nothing was captured from the page, so the recording was not saved'
         };
     }
+
+    return { success: true, events: recording.events, duration };
 }
 
 /**
@@ -222,4 +200,19 @@ export function setupRecordingHandlers(): void {
     ipcMain.handle('recording:stop', stopRecording);
 
     ipcMain.handle('recording:isActive', isRecording);
+
+    // Recorder preload: config lookup (sync, so it can start before page scripts)
+    ipcMain.on('recorder:getConfig', (event) => {
+        event.returnValue =
+            activeRecording && event.sender.id === activeRecording.webContentsId
+                ? activeRecording.config
+                : null;
+    });
+
+    // Recorder preload: captured events (across every page the window visits)
+    ipcMain.on('recorder:event', (event, rrwebEvent: unknown) => {
+        if (activeRecording && event.sender.id === activeRecording.webContentsId) {
+            activeRecording.events.push(rrwebEvent);
+        }
+    });
 }
