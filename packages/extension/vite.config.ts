@@ -46,6 +46,9 @@ function copyExtensionFiles() {
 }
 
 export default defineConfig({
+  // Chrome rejects extension scripts containing Unicode noncharacters (rrweb
+  // embeds a literal U+FFFE), so escape all non-ASCII output.
+  esbuild: { charset: 'ascii' },
   plugins: [react(), copyExtensionFiles()],
   build: {
     outDir: 'dist',
@@ -54,12 +57,11 @@ export default defineConfig({
       input: {
         popup: resolve(__dirname, 'src/popup/index.html'),
         background: resolve(__dirname, 'src/background/index.ts'),
-        content: resolve(__dirname, 'src/content/index.ts'),
+        // content script is built separately as an IIFE (see vite.content.config.ts)
       },
       output: {
         entryFileNames: (chunkInfo) => {
           if (chunkInfo.name === 'background') return 'background.js';
-          if (chunkInfo.name === 'content') return 'content.js';
           return 'assets/[name]-[hash].js';
         },
         chunkFileNames: 'assets/[name]-[hash].js',

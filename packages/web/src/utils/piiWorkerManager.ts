@@ -236,7 +236,7 @@ class PIIWorkerManager {
 
     if (config.phone) {
       result = result.replace(
-        /(?<![.\d])(?:\+?1[-.\s]?)?(?:\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4}(?![.\d])/g,
+        /(?<!\d|\d\.)(?:\+?1[-.\s]?)?(?:\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4}(?!\d|\.\d)/g,
         (match) => {
           const digits = match.replace(/\D/g, '');
           const last4 = digits.slice(-4);
@@ -317,7 +317,7 @@ class PIIWorkerManager {
     }
 
     if (config.phone) {
-      const matches = text.match(/(?<![.\d])(?:\+?1[-.\s]?)?(?:\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4}(?![.\d])/g);
+      const matches = text.match(/(?<!\d|\d\.)(?:\+?1[-.\s]?)?(?:\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4}(?!\d|\.\d)/g);
       if (matches) {
         matchCount += matches.length;
         types.push('phone');

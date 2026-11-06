@@ -1,3 +1,4 @@
 out/
 release/
 *.unpacked/
+out-e2e/

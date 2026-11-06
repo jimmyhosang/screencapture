@@ -163,44 +163,49 @@ async function broadcastStateUpdate(tabId: number): Promise<void> {
  * Handle messages from popup and content scripts
  */
 chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) => {
-  const tabId = sender.tab?.id;
+  // Messages from our own extension pages (popup, or popup.html opened in a tab)
+  // carry a chrome-extension:// URL; content scripts carry the page URL.
+  const fromContentScript =
+    !!sender.tab && !sender.url?.startsWith(chrome.runtime.getURL(''));
 
   (async () => {
     try {
       switch (message.type) {
         case 'START_RECORDING': {
-          if (!tabId) {
-            // Message from popup - get active tab
-            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-            if (!tab?.id) {
-              sendResponse({ success: false, error: 'No active tab' });
-              return;
-            }
-            const activeTabId = tab.id;
-            const payload = message.payload as StartRecordingPayload | undefined;
-            const settings = await getSettings();
-
-            tabStates.set(activeTabId, {
-              state: 'recording',
-              events: [],
-              startTime: Date.now(),
-              url: tab.url || '',
-              settings: {
-                ...DEFAULT_PRIVACY_SETTINGS,
-                ...settings.privacySettings,
-                ...payload?.settings,
-              },
-            });
-
-            // Inject content script and start recording
-            await chrome.tabs.sendMessage(activeTabId, {
-              type: 'START_RECORDING',
-              payload: { settings: tabStates.get(activeTabId)?.settings },
-            });
-
-            await broadcastStateUpdate(activeTabId);
-            sendResponse({ success: true, tabId: activeTabId });
+          if (fromContentScript) {
+            sendResponse({ success: false, error: 'START_RECORDING must come from the popup' });
+            return;
           }
+          // Message from popup - get active tab
+          const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+          if (!tab?.id) {
+            sendResponse({ success: false, error: 'No active tab' });
+            return;
+          }
+          const activeTabId = tab.id;
+          const payload = message.payload as StartRecordingPayload | undefined;
+          const settings = await getSettings();
+
+          tabStates.set(activeTabId, {
+            state: 'recording',
+            events: [],
+            startTime: Date.now(),
+            url: tab.url || '',
+            settings: {
+              ...DEFAULT_PRIVACY_SETTINGS,
+              ...settings.privacySettings,
+              ...payload?.settings,
+            },
+          });
+
+          // Inject content script and start recording
+          await chrome.tabs.sendMessage(activeTabId, {
+            type: 'START_RECORDING',
+            payload: { settings: tabStates.get(activeTabId)?.settings },
+          });
+
+          await broadcastStateUpdate(activeTabId);
+          sendResponse({ success: true, tabId: activeTabId });
           break;
         }
 

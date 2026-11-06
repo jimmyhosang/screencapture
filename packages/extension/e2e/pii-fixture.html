@@ -1,0 +1,21 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>PII fixture</title></head>
+<body>
+  <h1>Customer record</h1>
+  <p id="plain-email">Contact: jane.doe@example.com</p>
+  <p id="plain-phone">Phone: (555) 867-5309</p>
+  <p id="plain-ssn">SSN: 123-45-6789</p>
+  <p id="plain-cc">Card: 4111 1111 1111 1111</p>
+  <p id="sentence-phone">For help call 1-800-555-0199.</p>
+  <p id="safe">This sentence has no personal data.</p>
+  <div class="sensitive" id="blocked">BLOCKED-SECRET-TEXT</div>
+  <div data-private id="blocked2">PRIVATE-ATTR-TEXT</div>
+  <form>
+    <input id="name-input" type="text" />
+    <input id="pw-input" type="password" />
+    <textarea id="notes"></textarea>
+  </form>
+  <div id="dynamic"></div>
+</body>
+</html>

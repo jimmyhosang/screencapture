@@ -19,7 +19,7 @@ export interface RecorderConfig {
   blockSelectors: string[];
   /** Configuration for which PII types to redact */
   redactionConfig: RedactionConfig;
-  /** Additional CSS selectors for elements whose text should be masked */
+  /** Selectors whose text is PII-redacted when maskTextContent is false (when true, all text is) */
   maskTextSelectors: string[];
   /** Whether to inline stylesheets for accurate replay (default: true) */
   inlineStylesheet: boolean;
@@ -212,7 +212,11 @@ export function useSessionRecorder(
     const maskTextFn = createRedactionMaskFn(config);
     const blockClass = createBlockClassRegex(config.blockSelectors);
     const blockSelector = createBlockSelector(config.blockSelectors);
-    const maskTextSelector = createMaskTextSelector(config.maskTextSelectors);
+    // rrweb only runs maskTextFn on elements matching maskTextSelector. PII
+    // redaction must cover all page text, so match everything when enabled.
+    const maskTextSelector = config.maskTextContent
+      ? '*'
+      : createMaskTextSelector(config.maskTextSelectors);
 
     const stopFn = rrweb.record({
       emit(event) {
@@ -352,6 +356,9 @@ export function useRecorder(): UseRecorderReturn {
         },
         maskAllInputs: config.maskAllInputs,
         blockClass: config.blockSensitiveElements ? /sensitive|pii/ : undefined,
+        // rrweb only runs maskTextFn on elements matching maskTextSelector, so
+        // match everything; the mask fn itself only alters matching patterns.
+        maskTextSelector: config.maskTextPatterns || config.customMaskFn ? '*' : undefined,
         maskTextFn: config.maskTextPatterns || config.customMaskFn ? maskTextFn : undefined,
         recordCanvas: true,
         sampling: {

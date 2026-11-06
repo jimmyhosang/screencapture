@@ -124,106 +124,74 @@ function piiToMaskRegions(
 }
 
 /**
- * Generate FFmpeg filter string for redaction regions
+ * Generate an FFmpeg filtergraph (for -vf) that applies the redaction masks.
+ *
+ * - solid / pattern / unknown: opaque filled box
+ * - blur: the region is cropped out, blurred at maximum strength and overlaid
+ * - pixelate: the region is cropped, downscaled and upscaled with nearest-neighbour
+ *
+ * Every region fully replaces the pixels underneath it while its mask is active;
+ * nothing is drawn semi-transparently, so no underlying content bleeds through.
  */
-function generateFFmpegFilters(
-  masks: RedactionMask[],
-  fps: number = 30
-): string {
-  const filters: string[] = [];
+export function generateFFmpegFilters(masks: RedactionMask[]): string {
+  const segments: string[] = [];
+  let current = ''; // label of the stream produced so far ('' = graph input)
+  let n = 0;
+
+  const input = () => (current ? `[${current}]` : '');
 
   for (const mask of masks) {
-    const startSec = mask.startTime / 1000;
-    const endSec = mask.endTime / 1000;
+    const startSec = (mask.startTime / 1000).toFixed(3);
+    const endSec = (mask.endTime / 1000).toFixed(3);
+    const enable = `enable='between(t,${startSec},${endSec})'`;
 
     for (const region of mask.regions) {
-      const { x, y, width, height } = region.bounds;
-      const enableExpr = `between(t,${startSec},${endSec})`;
+      const x = Math.max(0, Math.round(region.bounds.x));
+      const y = Math.max(0, Math.round(region.bounds.y));
+      const w = Math.max(2, Math.round(region.bounds.width));
+      const h = Math.max(2, Math.round(region.bounds.height));
+      const out = `v${n}`;
+      // Clamp the crop to the frame so off-edge regions don't abort the export
+      const crop = `crop=w='min(${w},iw-${x})':h='min(${h},ih-${y})':x=${x}:y=${y}`;
 
-      switch (region.style) {
-        case 'blur':
-          // Use box blur filter
-          filters.push(
-            `split[main][blur];` +
-            `[blur]crop=${width}:${height}:${x}:${y},boxblur=10:10[blurred];` +
-            `[main][blurred]overlay=${x}:${y}:enable='${enableExpr}'`
-          );
-          break;
-
-        case 'pixelate':
-          // Scale down and up for pixelation effect
-          const pixelSize = 8;
-          filters.push(
-            `split[main][pix];` +
-            `[pix]crop=${width}:${height}:${x}:${y},` +
-            `scale=iw/${pixelSize}:ih/${pixelSize}:flags=neighbor,` +
-            `scale=${width}:${height}:flags=neighbor[pixelated];` +
-            `[main][pixelated]overlay=${x}:${y}:enable='${enableExpr}'`
-          );
-          break;
-
-        case 'solid':
-          // Draw filled box
-          const color = region.color || 'black';
-          filters.push(
-            `drawbox=x=${x}:y=${y}:w=${width}:h=${height}:` +
-            `color=${color}:t=fill:enable='${enableExpr}'`
-          );
-          break;
-
-        case 'pattern':
-          // Crosshatch pattern using multiple drawbox calls
-          const patternColor = region.color || '#333333';
-          filters.push(
-            `drawbox=x=${x}:y=${y}:w=${width}:h=${height}:` +
-            `color=black:t=fill:enable='${enableExpr}'`
-          );
-          // Add diagonal lines (simplified - full pattern would need more complex filter)
-          break;
+      if (region.style === 'blur') {
+        segments.push(
+          `${input()}split[base${n}][src${n}];` +
+          `[src${n}]${crop},` +
+          `boxblur=luma_radius='min(w,h)/2':luma_power=3:` +
+          `chroma_radius='min(cw,ch)/2':chroma_power=3[fx${n}];` +
+          `[base${n}][fx${n}]overlay=${x}:${y}:${enable}[${out}]`
+        );
+      } else if (region.style === 'pixelate') {
+        const block = 12;
+        // Rounding the downscale up means the upscaled patch is never smaller
+        // than the region (overlay clips anything past the frame edge).
+        segments.push(
+          `${input()}split[base${n}][src${n}];` +
+          `[src${n}]${crop},` +
+          `scale=w='ceil(iw/${block})':h='ceil(ih/${block})':flags=area,` +
+          `scale=w='iw*${block}':h='ih*${block}':flags=neighbor[fx${n}];` +
+          `[base${n}][fx${n}]overlay=${x}:${y}:${enable}[${out}]`
+        );
+      } else {
+        const color =
+          region.style === 'solid' && region.color ? region.color.replace('#', '0x') : 'black';
+        segments.push(
+          `${input()}drawbox=x=${x}:y=${y}:w=${w}:h=${h}:color=${color}:t=fill:${enable}[${out}]`
+        );
       }
+
+      current = out;
+      n++;
     }
   }
 
-  // For multiple regions, we need to chain the filters properly
-  // Simplify by using drawbox for most cases
-  if (filters.length > 0) {
-    // Combine filters more efficiently
-    const combinedFilters: string[] = [];
+  if (segments.length === 0) return '';
 
-    for (const mask of masks) {
-      const startSec = mask.startTime / 1000;
-      const endSec = mask.endTime / 1000;
-
-      for (const region of mask.regions) {
-        const { x, y, width, height } = region.bounds;
-        const enableExpr = `between(t,${startSec.toFixed(3)},${endSec.toFixed(3)})`;
-
-        if (region.style === 'blur') {
-          // For blur, we'll use a simpler approach with avgblur on the region
-          combinedFilters.push(
-            `drawbox=x=${x}:y=${y}:w=${width}:h=${height}:` +
-            `color=black@0.8:t=fill:enable='${enableExpr}'`
-          );
-        } else if (region.style === 'solid') {
-          const color = region.color?.replace('#', '0x') || 'black';
-          combinedFilters.push(
-            `drawbox=x=${x}:y=${y}:w=${width}:h=${height}:` +
-            `color=${color}:t=fill:enable='${enableExpr}'`
-          );
-        } else {
-          // Default to black box for other styles
-          combinedFilters.push(
-            `drawbox=x=${x}:y=${y}:w=${width}:h=${height}:` +
-            `color=black:t=fill:enable='${enableExpr}'`
-          );
-        }
-      }
-    }
-
-    return combinedFilters.join(',');
-  }
-
-  return '';
+  // The final stream is the graph output, so it must stay unlabeled
+  const last = segments.length - 1;
+  segments[last] = segments[last].slice(0, -`[${current}]`.length);
+  return segments.join(';');
 }
 
 // ============================================================================

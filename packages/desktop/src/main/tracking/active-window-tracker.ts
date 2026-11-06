@@ -8,14 +8,21 @@
 import { BrowserWindow } from 'electron';
 import { getActiveWindowRepository } from '../ccaas/repositories';
 
-// Dynamic import with fallback for active-win (has native module compatibility issues with Electron)
-let activeWindow: (() => Promise<any>) | null = null;
-try {
-  // @ts-ignore - dynamic import
-  const activeWinModule = require('active-win');
-  activeWindow = activeWinModule.activeWindow || activeWinModule.default;
-} catch (error) {
-  console.warn('[ActiveWindowTracker] active-win module not available:', (error as Error).message);
+// active-win is ESM-only (v9+), so it must be loaded with dynamic import() rather
+// than require(). Loaded lazily and cached; null means the native module is unavailable.
+type ActiveWindowFn = () => Promise<any>;
+let activeWindowLoader: Promise<ActiveWindowFn | null> | null = null;
+
+function loadActiveWindow(): Promise<ActiveWindowFn | null> {
+  if (!activeWindowLoader) {
+    activeWindowLoader = import('active-win')
+      .then((mod: any) => (mod.activeWindow || mod.default || null) as ActiveWindowFn | null)
+      .catch((error: Error) => {
+        console.warn('[ActiveWindowTracker] active-win module not available:', error.message);
+        return null;
+      });
+  }
+  return activeWindowLoader;
 }
 
 // =============================================================================
@@ -212,8 +219,9 @@ export class ActiveWindowTracker {
    * Capture current active window
    */
   private async captureWindow(): Promise<void> {
-    // Skip if active-win module is not available
-    if (!activeWindow) {
+    const activeWindow = await loadActiveWindow();
+    // Skip if active-win is unavailable, or tracking was paused/stopped while loading
+    if (!activeWindow || this.isPaused || !this.recordingId) {
       return;
     }
 

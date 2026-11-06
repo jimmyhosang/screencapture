@@ -5,10 +5,10 @@
  * Supports chunked recording, active window tracking, and crash recovery.
  */
 
-import { desktopCapturer, BrowserWindow, ipcMain } from 'electron';
+import { app, desktopCapturer, BrowserWindow, ipcMain } from 'electron';
 import { join, basename } from 'path';
 import { existsSync, mkdirSync, unlinkSync, readdirSync, writeFileSync, readFileSync } from 'fs';
-import { unlink, writeFile, readFile, readdir } from 'fs/promises';
+import { unlink, writeFile, readFile, readdir, appendFile, rename } from 'fs/promises';
 import ffmpeg from 'fluent-ffmpeg';
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 import { getRecordingsPath } from '../database';
@@ -36,6 +36,7 @@ export interface RecordingOptions {
   frameRate?: number;
   outputDir?: string;
   maxDuration?: number; // in milliseconds, default 2 hours
+  chunkIntervalMs?: number; // how often chunks are flushed to disk, default 30s
 }
 
 export interface RecordingResult {
@@ -165,21 +166,31 @@ export class ScreenRecorder {
 
     this.recordingWindows.set(recordingId, recordingWindow);
 
-    // Load recording page
-    await recordingWindow.loadURL(`data:text/html,${encodeURIComponent(this.getRecorderHTML())}`);
+    try {
+      // Load the recording page from a file. It must be a secure context:
+      // under a data: URL navigator.mediaDevices is undefined.
+      await recordingWindow.loadFile(this.getRecorderPagePath());
 
-    // Start recording in the window
-    await recordingWindow.webContents.executeJavaScript(`
-      window.startRecording({
-        sourceId: '${options.sourceId}',
-        recordingId: '${recordingId}',
-        resolution: ${JSON.stringify(resolution)},
-        frameRate: ${frameRate}
-      });
-    `);
+      // Start capture; rejects if the source can't be captured
+      await recordingWindow.webContents.executeJavaScript(
+        `window.startRecording(${JSON.stringify({
+          sourceId: options.sourceId,
+          recordingId,
+          resolution,
+          frameRate
+        })})`
+      );
+    } catch (error) {
+      // Don't leave a recording behind that will never produce video
+      if (!recordingWindow.isDestroyed()) recordingWindow.close();
+      this.recordingWindows.delete(recordingId);
+      this.activeRecordings.delete(recordingId);
+      this.removeRecordingState(recordingId);
+      throw new Error(`Failed to start screen capture: ${(error as Error).message}`);
+    }
 
     // Start chunk timer
-    this.startChunkTimer(recordingId);
+    this.startChunkTimer(recordingId, options.chunkIntervalMs ?? CHUNK_INTERVAL);
 
     // Start window tracking
     this.startWindowTracking(recordingId);
@@ -322,7 +333,7 @@ export class ScreenRecorder {
     await writeFile(filePath, buffer);
   }
 
-  private startChunkTimer(recordingId: string): void {
+  private startChunkTimer(recordingId: string, intervalMs: number): void {
     const timer = setInterval(async () => {
       const state = this.activeRecordings.get(recordingId);
       if (!state || !state.isRecording) {
@@ -339,7 +350,7 @@ export class ScreenRecorder {
           console.error(`[ScreenRecorder] Error requesting chunk:`, error);
         }
       }
-    }, CHUNK_INTERVAL);
+    }, intervalMs);
 
     this.chunkTimers.set(recordingId, timer);
   }
@@ -362,8 +373,9 @@ export class ScreenRecorder {
 
       try {
         // Dynamic import for active-win (ESM module)
-        const activeWin = await import('active-win');
-        const window = await activeWin.default();
+        // active-win is ESM-only and has a named export (no default)
+        const { activeWindow } = await import('active-win');
+        const window = await activeWindow();
 
         if (window) {
           const activity: WindowActivity = {
@@ -417,39 +429,32 @@ export class ScreenRecorder {
       throw new Error('No chunks to merge');
     }
 
-    if (chunks.length === 1) {
-      // Just copy single chunk
-      const fs = await import('fs/promises');
-      await fs.copyFile(chunks[0], outputPath);
-      return;
+    // MediaRecorder produces a single continuous WebM stream: only the first
+    // chunk carries the header, later chunks are continuation clusters. They
+    // must be joined byte-for-byte; ffmpeg's concat demuxer treats each file as
+    // standalone and silently drops everything after the first chunk.
+    const joinedPath = `${outputPath}.joined.webm`;
+    await writeFile(joinedPath, Buffer.alloc(0));
+    for (const chunk of chunks) {
+      await appendFile(joinedPath, await readFile(chunk));
     }
 
-    return new Promise((resolve, reject) => {
-      // Create concat file for ffmpeg
-      const concatFilePath = join(getRecordingsPath(), `concat_${Date.now()}.txt`);
-      const concatContent = chunks.map((chunk) => `file '${chunk}'`).join('\n');
-      writeFileSync(concatFilePath, concatContent);
-
-      ffmpeg()
-        .input(concatFilePath)
-        .inputOptions(['-f', 'concat', '-safe', '0'])
-        .outputOptions(['-c', 'copy']) // Copy without re-encoding
-        .output(outputPath)
-        .on('end', () => {
-          // Clean up concat file
-          try {
-            unlinkSync(concatFilePath);
-          } catch {}
-          resolve();
-        })
-        .on('error', (err) => {
-          try {
-            unlinkSync(concatFilePath);
-          } catch {}
-          reject(err);
-        })
-        .run();
-    });
+    // Remux (no re-encode) so the file gets a proper duration and seek index,
+    // which MediaRecorder output lacks. Fall back to the raw stream on failure.
+    try {
+      await new Promise<void>((resolve, reject) => {
+        ffmpeg(joinedPath)
+          .outputOptions(['-c', 'copy'])
+          .output(outputPath)
+          .on('end', () => resolve())
+          .on('error', reject)
+          .run();
+      });
+      await unlink(joinedPath);
+    } catch (error) {
+      console.warn('[ScreenRecorder] Remux failed, keeping raw stream:', (error as Error).message);
+      await rename(joinedPath, outputPath);
+    }
   }
 
   private async cleanupChunks(chunks: string[], outputDir: string): Promise<void> {
@@ -522,6 +527,12 @@ export class ScreenRecorder {
     }
   }
 
+  private getRecorderPagePath(): string {
+    const pagePath = join(app.getPath('userData'), 'screen-recorder.html');
+    writeFileSync(pagePath, this.getRecorderHTML());
+    return pagePath;
+  }
+
   private getRecorderHTML(): string {
     return `
 <!DOCTYPE html>
@@ -538,10 +549,21 @@ export class ScreenRecorder {
     let recordedChunks = [];
     let currentRecordingId = null;
 
+    // Base64-encode a Blob. (btoa(String.fromCharCode(...bytes)) overflows the
+    // call stack for anything beyond a few hundred KB.)
+    function blobToBase64(blob) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(blob);
+      });
+    }
+
     window.startRecording = async function(options) {
       currentRecordingId = options.recordingId;
 
-      try {
+      {
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: false,
           video: {
@@ -581,8 +603,6 @@ export class ScreenRecorder {
 
         mediaRecorder.start();
         console.log('Recording started');
-      } catch (error) {
-        ipcRenderer.send('recording:error', currentRecordingId, error.message);
       }
     };
 
@@ -595,8 +615,7 @@ export class ScreenRecorder {
         setTimeout(async () => {
           if (recordedChunks.length > 0) {
             const blob = new Blob(recordedChunks, { type: 'video/webm' });
-            const buffer = await blob.arrayBuffer();
-            const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+            const base64 = await blobToBase64(blob);
             ipcRenderer.send('recording:chunk', currentRecordingId, base64);
             recordedChunks = [];
           }
@@ -612,9 +631,7 @@ export class ScreenRecorder {
         mediaRecorder.onstop = async () => {
           if (recordedChunks.length > 0) {
             const blob = new Blob(recordedChunks, { type: 'video/webm' });
-            const buffer = await blob.arrayBuffer();
-            const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
-            resolve(base64);
+            resolve(await blobToBase64(blob));
           } else {
             resolve(null);
           }

@@ -94,6 +94,10 @@ async function startRecording(settings: PrivacySettings): Promise<void> {
     maskAllInputs: settings.maskAllInputs,
     blockClass,
     blockSelector,
+    // rrweb only calls maskTextFn for text inside elements matching
+    // maskTextSelector, so match everything to run all page text through the
+    // PII redactor (it leaves non-PII text untouched).
+    maskTextSelector: settings.maskTextContent ? '*' : undefined,
     maskTextFn,
     // Recording options
     inlineStylesheet: true,
